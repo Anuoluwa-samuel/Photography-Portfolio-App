@@ -69,7 +69,7 @@ const sectionObs = new IntersectionObserver(entries => {
 const revealObs = new IntersectionObserver(entries => {
   entries.forEach(en => { if (en.isIntersecting){ en.target.classList.add('in'); revealObs.unobserve(en.target); } });
 }, { threshold:.15, rootMargin:'0px 0px -6% 0px' });
-$$('.reveal, .reveal-img').forEach(el => revealObs.observe(el));
+$$('.reveal, .reveal-img, .card-reveal').forEach(el => revealObs.observe(el));
 
 function countUp(el){
   const target = +el.dataset.count, suffix = el.dataset.suffix || '', dur = reducedMotion ? 0 : 1600, t0 = performance.now();

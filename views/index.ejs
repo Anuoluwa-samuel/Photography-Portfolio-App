@@ -114,8 +114,8 @@
         </div>
         <% if (aboutPoints.length) { %>
         <div class="about-points">
-          <% aboutPoints.forEach(p => { %>
-          <div class="point"><svg><use href="#i-<%= p.icon %>"/></svg><div><h3><%= p.title %></h3><p><%= p.text %></p></div></div>
+          <% aboutPoints.forEach((p, i) => { %>
+          <div class="point reveal" style="--d:<%= .1 + Math.min(i,5)*.06 %>s"><svg><use href="#i-<%= p.icon %>"/></svg><div><h3><%= p.title %></h3><p><%= p.text %></p></div></div>
           <% }) %>
         </div>
         <% } %>
@@ -126,7 +126,7 @@
       </div>
     </div>
     <% if (stats.length) { %>
-    <div class="stats" id="stats">
+    <div class="stats reveal" id="stats">
       <% stats.forEach(st => { %>
       <div class="stat"><svg><use href="#i-<%= st.icon %>"/></svg><div class="label"><%= st.label %></div><div class="num" data-count="<%= st.value %>" data-suffix="<%= st.suffix %>">0</div></div>
       <% }) %>
@@ -177,8 +177,8 @@
       <p class="lead"><%= s.services_intro %></p>
     </div>
     <div class="services-grid">
-      <% services.forEach(sv => { %>
-      <article class="svc">
+      <% services.forEach((sv, i) => { %>
+      <article class="svc card-reveal" style="--d:<%= Math.min(i,5)*.07 %>s">
         <svg class="icon"><use href="#i-<%= sv.icon %>"/></svg>
         <h3><%= sv.name %></h3>
         <% if (sv.price) { %><p class="price"><%= sv.price %></p><% } %>
