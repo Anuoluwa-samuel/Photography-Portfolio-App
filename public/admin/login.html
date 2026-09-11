@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in — Admin</title>
+<title>Sign in — YIT0 SHOT IT Admin</title>
 <meta name="robots" content="noindex">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/admin/admin.css">
@@ -27,7 +27,7 @@
     try {
       const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(f))) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Sign in failed.');
+      if (!res.ok) throw new Error(data.message || 'Sign in failed.');
       location.href = '/admin';
     } catch (ex) { err.textContent = ex.message; btn.disabled = false; }
   });

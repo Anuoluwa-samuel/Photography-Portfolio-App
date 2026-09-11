@@ -1,7 +1,8 @@
 // Reset the admin password from the command line:  npm run change-password
 require('dotenv').config();
 const readline = require('readline');
-const { users, db } = require('../src/db');
+const users = require('../src/models/User');
+const { db } = require('../src/config/database');
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const ask = q => new Promise(r => rl.question(q, r));

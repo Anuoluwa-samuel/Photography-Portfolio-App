@@ -1,4 +1,4 @@
-// Adeyemi Visuals — photographer portfolio + admin dashboard
+// YIT0 SHOT IT — photography portfolio + admin CMS
 // Node.js 18+ · Express 5 · SQLite (better-sqlite3) · EJS · Sharp · Nodemailer
 require('dotenv').config();
 
@@ -7,17 +7,15 @@ const express = require('express');
 const helmet = require('helmet');
 const cookieSession = require('cookie-session');
 
+const env = require('./src/config/environment');
+require('./src/config/database'); // connects + runs schema/migrations before anything else touches the db
+
 const publicRoutes = require('./src/routes/public');
 const adminRoutes = require('./src/routes/admin');
-const { requireAdmin } = require('./src/auth');
+const { requireAdmin } = require('./src/middleware/auth');
+const { notFound, errorHandler } = require('./src/middleware/errorHandler');
 
 const app = express();
-const PORT = Number(process.env.PORT || 3000);
-const isProd = process.env.NODE_ENV === 'production';
-
-if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.startsWith('change-me')) {
-  console.warn('[warn] SESSION_SECRET is not set to a real secret. Edit .env before going live.');
-}
 
 app.set('trust proxy', 1);          // correct req.ip / secure cookies behind a reverse proxy (Render, Railway, nginx)
 app.set('view engine', 'ejs');
@@ -35,7 +33,7 @@ app.use(helmet({
       imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com'], // placeholder photos; remove once you upload your own
       connectSrc: ["'self'"],
       frameAncestors: ["'none'"],
-      upgradeInsecureRequests: isProd ? [] : null,
+      upgradeInsecureRequests: env.isProd ? [] : null,
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -45,18 +43,18 @@ app.use(helmet({
 app.use(express.json({ limit: '200kb' }));
 app.use(express.urlencoded({ extended: false, limit: '200kb' }));
 app.use(cookieSession({
-  name: 'av_admin',
-  keys: [process.env.SESSION_SECRET || 'dev-only-secret'],
+  name: 'yss_admin',
+  keys: [env.SESSION_SECRET],
   maxAge: 12 * 60 * 60 * 1000,      // 12 hours
   httpOnly: true,
   sameSite: 'lax',
-  secure: isProd,
+  secure: env.isProd,
 }));
 
 /* ---------- Static files ---------- */
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: isProd ? '7d' : 0, index: false, redirect: false }));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: env.isProd ? '7d' : 0, index: false, redirect: false }));
 // Uploads may live outside /public in production (e.g. a persistent disk) — serve them from UPLOAD_DIR too.
-app.use('/uploads', express.static(path.resolve(process.env.UPLOAD_DIR || './public/uploads'), { maxAge: isProd ? '30d' : 0 }));
+app.use('/uploads', express.static(env.UPLOAD_DIR, { maxAge: env.isProd ? '30d' : 0 }));
 
 /* ---------- Routes ---------- */
 app.use(publicRoutes);
@@ -70,24 +68,17 @@ app.get(['/admin', '/admin/*rest'], requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
 });
 
-app.get('/robots.txt', (req, res) => res.type('text/plain').send('User-agent: *\nDisallow: /admin\nDisallow: /api/\nAllow: /\n'));
+app.get('/robots.txt', (req, res) => res.type('text/plain').send(
+  `User-agent: *\nDisallow: /admin\nDisallow: /api/\nAllow: /\nSitemap: ${env.SITE_URL || `${req.protocol}://${req.get('host')}`}/sitemap.xml\n`
+));
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
 /* ---------- Errors ---------- */
-app.use((req, res) => {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
-  res.status(404).render('404');
-});
-app.use((err, req, res, next) => {  // eslint-disable-line no-unused-vars
-  console.error(err);
-  const status = err.status || (err.code === 'LIMIT_FILE_SIZE' ? 413 : 500);
-  const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Image is too large (max 25 MB).' : (isProd ? 'Something went wrong.' : err.message);
-  if (req.path.startsWith('/api/')) return res.status(status).json({ error: msg });
-  res.status(status).send(msg);
-});
+app.use(notFound);
+app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`\n  Adeyemi Visuals is running`);
-  console.log(`  Site:   http://localhost:${PORT}`);
-  console.log(`  Admin:  http://localhost:${PORT}/admin\n`);
+app.listen(env.PORT, () => {
+  console.log(`\n  ${env.SITE_NAME} is running`);
+  console.log(`  Site:   http://localhost:${env.PORT}`);
+  console.log(`  Admin:  http://localhost:${env.PORT}/admin\n`);
 });

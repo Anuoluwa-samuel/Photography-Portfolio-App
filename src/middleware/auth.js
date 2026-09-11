@@ -1,18 +1,18 @@
 // Admin authentication: cookie-session + bcrypt.
 const bcrypt = require('bcryptjs');
-const { users } = require('./db');
+const User = require('../models/User');
 
 function requireAdmin(req, res, next) {
   if (req.session?.userId) return next();
-  if (req.originalUrl.startsWith('/api/')) return res.status(401).json({ error: 'Not signed in' });
+  if (req.originalUrl.startsWith('/api/')) return res.status(401).json({ success: false, message: 'Not signed in', error: 'UNAUTHENTICATED' });
   return res.redirect('/admin/login');
 }
 
 function login(req, res) {
   const { username = '', password = '' } = req.body || {};
-  const user = users.byUsername(String(username).trim());
+  const user = User.byUsername(String(username).trim());
   if (!user || !bcrypt.compareSync(String(password), user.password_hash)) {
-    return res.status(401).json({ error: 'Wrong username or password.' });
+    return res.status(401).json({ success: false, message: 'Wrong username or password.', error: 'INVALID_CREDENTIALS' });
   }
   req.session.userId = user.id;
   req.session.username = user.username;

@@ -1,13 +1,16 @@
-// Database: schema, first-run seed, and small query helpers.
-const path = require('path');
+// Database connection, schema, and the one-time migration from the old flat
+// `gallery` table to the Project -> Images model.
 const fs = require('fs');
+const path = require('path');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
+const env = require('./environment');
+const logger = require('../utils/logger')('db');
+const { slugify } = require('../utils/slugify');
 
-const DATA_DIR = path.resolve(process.env.DATA_DIR || './data');
-fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.mkdirSync(env.DATA_DIR, { recursive: true });
 
-const db = new Database(path.join(DATA_DIR, 'site.db'));
+const db = new Database(path.join(env.DATA_DIR, 'site.db'));
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -27,20 +30,44 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL DEFAULT ''
 );
 
-CREATE TABLE IF NOT EXISTS gallery (
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  label TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  sort INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS projects (
   id INTEGER PRIMARY KEY,
   title TEXT NOT NULL,
-  alt TEXT NOT NULL DEFAULT '',
-  category TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+  location TEXT NOT NULL DEFAULT '',
+  date TEXT NOT NULL DEFAULT '',
+  cover_image TEXT NOT NULL DEFAULT '',
+  featured INTEGER NOT NULL DEFAULT 0,
+  published INTEGER NOT NULL DEFAULT 1,
+  sort INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_projects_category ON projects(category_id);
+
+CREATE TABLE IF NOT EXISTS images (
+  id INTEGER PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   src_full TEXT NOT NULL,
   src_thumb TEXT NOT NULL,
   width INTEGER NOT NULL DEFAULT 800,
   height INTEGER NOT NULL DEFAULT 1000,
-  external INTEGER NOT NULL DEFAULT 0,
-  featured INTEGER NOT NULL DEFAULT 0,
+  caption TEXT NOT NULL DEFAULT '',
+  alt TEXT NOT NULL DEFAULT '',
   sort INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
+CREATE INDEX IF NOT EXISTS idx_images_project ON images(project_id);
 
 CREATE TABLE IF NOT EXISTS services (
   id INTEGER PRIMARY KEY,
@@ -69,20 +96,22 @@ CREATE TABLE IF NOT EXISTS enquiries (
 `);
 
 /* ------------------------------------------------------------------ */
-/* Seed (runs once, on an empty database)                              */
+/* Seed data (first run only)                                          */
 /* ------------------------------------------------------------------ */
 const U  = (id, w, h) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${h}&q=75`;
 const UL = (id)       => `https://images.unsplash.com/photo-${id}?auto=format&fit=max&w=2000&q=85`;
 
+const OLD_BRAND_DEFAULTS = { brand_name: 'Adeyemi', site_name: 'Adeyemi Visuals', seo_title: 'Adeyemi Visuals | Portrait & Wedding Photographer in Lagos, Nigeria' };
+
 const DEFAULT_SETTINGS = {
   // Brand
-  brand_name: 'Adeyemi',
-  brand_tagline: 'visual storyteller',
-  site_name: 'Adeyemi Visuals',
+  brand_name: 'YIT0',
+  brand_tagline: 'shot it',
+  site_name: 'YIT0 SHOT IT',
   photographer_name: 'Samuel Adeyemi',
   // SEO
-  seo_title: 'Adeyemi Visuals | Portrait & Wedding Photographer in Lagos, Nigeria',
-  seo_description: 'Adeyemi Visuals is a Lagos-based portrait, wedding and editorial photographer creating cinematic, timeless imagery. View the portfolio, explore services and book a session.',
+  seo_title: 'YIT0 SHOT IT | Portrait & Wedding Photographer in Lagos, Nigeria',
+  seo_description: 'YIT0 SHOT IT is a Lagos-based portrait, wedding and editorial photography studio creating cinematic, timeless imagery. View the portfolio, explore services and book a session.',
   seo_keywords: 'Lagos photographer, wedding photographer Nigeria, portrait photography Lagos, editorial photographer',
   // Hero  (wrap the accent word in [[double brackets]])
   hero_eyebrow: 'Portrait · Wedding · Editorial',
@@ -94,7 +123,7 @@ const DEFAULT_SETTINGS = {
   hero_tag_sub: 'Studio portraits, 2026',
   // Featured
   featured_title: 'Three frames [[I\'d]] start with',
-  featured_intro: 'A quick look before the full gallery: one portrait, one wedding, one editorial. Each was made with available light and a lot of patience.',
+  featured_intro: 'A quick look before the full portfolio: one portrait, one wedding, one editorial. Each was made with available light and a lot of patience.',
   // About
   about_title: 'Who is [[behind]] the lens',
   about_bio: "I'm Samuel Adeyemi, a photographer working out of Lagos for the past nine years. I started with a borrowed film camera at university events and never quite put it down.\n\nToday I split my time between studio portraiture, weddings across Nigeria and editorial work for fashion and lifestyle brands. My approach is simple: slow down, find the light, and let people be themselves in front of it.",
@@ -115,7 +144,7 @@ const DEFAULT_SETTINGS = {
   ]),
   // Portfolio / services / contact copy
   portfolio_title: 'Selected [[work]]',
-  portfolio_intro: 'Browse by category or take it all in. Tap any image to view it full-screen.',
+  portfolio_intro: 'Browse by category or take it all in. Open any project to view the full gallery.',
   services_title: 'What I [[shoot]]',
   services_intro: "Every package includes a planning call, professional editing and a private online gallery. Prices are starting points; tell me about your day and I'll send a proper quote.",
   testimonial_text: "He disappeared into our wedding. We barely noticed him, and then the photos came back and he'd seen everything.",
@@ -124,20 +153,30 @@ const DEFAULT_SETTINGS = {
   contact_title: "Let's make [[something]]",
   contact_intro: 'Tell me about your session, wedding or campaign. I reply to every enquiry within one working day, and dates go quickly between November and February.',
   // Contact details
-  email: 'hello@adeyemivisuals.com',
+  email: 'hello@yito.shotit.com',
   phone: '+234 800 000 0000',
   location: 'Lagos, Nigeria — available across Nigeria and for destination weddings',
   location_short: 'Lagos, Nigeria',
   hours: 'Mon–Sat, 9am–6pm WAT',
   footer_blurb: 'Portrait, wedding and editorial photography with a cinematic eye. Based in Lagos, working everywhere the light is good.',
   // Socials (leave blank to hide)
-  social_instagram: 'https://instagram.com/adeyemivisuals',
-  social_facebook: 'https://facebook.com/adeyemivisuals',
-  social_tiktok: 'https://tiktok.com/@adeyemivisuals',
-  social_x: 'https://x.com/adeyemivisuals',
-  social_linkedin: 'https://linkedin.com/in/adeyemivisuals',
-  social_youtube: 'https://youtube.com/@adeyemivisuals',
+  social_instagram: 'https://instagram.com/yitoshotit',
+  social_facebook: 'https://facebook.com/yitoshotit',
+  social_tiktok: 'https://tiktok.com/@yitoshotit',
+  social_x: 'https://x.com/yitoshotit',
+  social_linkedin: 'https://linkedin.com/in/yitoshotit',
+  social_youtube: 'https://youtube.com/@yitoshotit',
 };
+
+const DEFAULT_CATEGORIES = [
+  { slug: 'portraits',  label: 'Portraits' },
+  { slug: 'weddings',   label: 'Weddings' },
+  { slug: 'events',     label: 'Events' },
+  { slug: 'fashion',    label: 'Fashion' },
+  { slug: 'lifestyle',  label: 'Lifestyle' },
+  { slug: 'commercial', label: 'Commercial' },
+  { slug: 'nature',     label: 'Nature & travel' },
+];
 
 const SEED_GALLERY = [
   ['portraits',  'Window light, Yaba',       'Close-up portrait of a man in soft window light',                     '1500648767791-00dcc994a43e', 800, 1000, 1],
@@ -172,116 +211,123 @@ const SEED_SERVICES = [
   ['Editing & retouching',  'wand',     'From ₦5,000 / image',  "Colour grading and high-end retouching for images you've already shot. Natural results, no plastic skin.",     ['Colour + exposure correction', 'Skin and background cleanup', '2 revision rounds', '72-hour turnaround'], 'Send your files'],
 ];
 
-function seedIfEmpty() {
-  const settingsCount = db.prepare('SELECT COUNT(*) AS n FROM settings').get().n;
-  if (settingsCount === 0) {
+function seedSettings() {
+  if (db.prepare('SELECT COUNT(*) AS n FROM settings').get().n === 0) {
     const ins = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
     db.transaction(() => { for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) ins.run(k, v); })();
   }
-  if (db.prepare('SELECT COUNT(*) AS n FROM gallery').get().n === 0) {
-    const ins = db.prepare(`INSERT INTO gallery (title, alt, category, src_full, src_thumb, width, height, external, featured, sort)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`);
-    db.transaction(() => {
-      SEED_GALLERY.forEach(([cat, title, alt, img, w, h, feat], i) => ins.run(title, alt, cat, UL(img), U(img, w, h), w, h, feat, i));
-    })();
+}
+function seedCategories() {
+  if (db.prepare('SELECT COUNT(*) AS n FROM categories').get().n === 0) {
+    const ins = db.prepare('INSERT INTO categories (slug, label, active, sort) VALUES (?, ?, 1, ?)');
+    db.transaction(() => { DEFAULT_CATEGORIES.forEach((c, i) => ins.run(c.slug, c.label, i)); })();
   }
+}
+// Placeholder demo content — only used on a genuinely fresh install (no projects AND no legacy
+// `gallery` table to migrate from). Must run AFTER migrateLegacyGallery(), never before it,
+// or real uploaded photos in an existing `gallery` table would be orphaned into the backup table.
+function seedProjectsFallback() {
+  if (db.prepare('SELECT COUNT(*) AS n FROM projects').get().n > 0) return;
+  const catBySlug = Object.fromEntries(db.prepare('SELECT id, slug FROM categories').all().map(c => [c.slug, c.id]));
+  const insProject = db.prepare(`INSERT INTO projects (title, slug, description, category_id, cover_image, featured, published, sort)
+                                  VALUES (@title, @slug, '', @category_id, @cover_image, @featured, 1, @sort)`);
+  const insImage = db.prepare(`INSERT INTO images (project_id, src_full, src_thumb, width, height, caption, alt, sort)
+                                VALUES (@project_id, @src_full, @src_thumb, @width, @height, @caption, @alt, @sort)`);
+  db.transaction(() => {
+    DEFAULT_CATEGORIES.forEach((cat, ci) => {
+      const photos = SEED_GALLERY.filter(([c]) => c === cat.slug);
+      if (!photos.length) return;
+      const cover = photos.find(p => p[6]) || photos[0];
+      const projectId = insProject.run({
+        title: `${cat.label} collection`, slug: cat.slug,
+        category_id: catBySlug[cat.slug], cover_image: U(cover[3], cover[4], cover[5]),
+        featured: photos.some(p => p[6]) ? 1 : 0, sort: ci,
+      }).lastInsertRowid;
+      photos.forEach(([, title, alt, img, w, h], i) => insImage.run({
+        project_id: projectId, src_full: UL(img), src_thumb: U(img, w, h), width: w, height: h, caption: title, alt, sort: i,
+      }));
+    });
+  })();
+}
+function seedServices() {
   if (db.prepare('SELECT COUNT(*) AS n FROM services').get().n === 0) {
     const ins = db.prepare('INSERT INTO services (name, icon, price, description, includes, cta, sort) VALUES (?, ?, ?, ?, ?, ?, ?)');
     db.transaction(() => {
       SEED_SERVICES.forEach(([name, icon, price, desc, inc, cta], i) => ins.run(name, icon, price, desc, JSON.stringify(inc), cta, i));
     })();
   }
+}
+function seedUsers() {
   if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n === 0) {
-    const username = process.env.ADMIN_USERNAME || 'admin';
-    const password = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
-    db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, bcrypt.hashSync(password, 12));
-    console.log(`[db] Created admin user "${username}" (password from ADMIN_PASSWORD in .env)`);
+    db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(env.ADMIN_USERNAME, bcrypt.hashSync(env.ADMIN_PASSWORD, 12));
+    logger.info(`Created admin user "${env.ADMIN_USERNAME}" (password from ADMIN_PASSWORD in .env)`);
   }
 }
-seedIfEmpty();
+seedSettings();
+seedCategories();
 
 /* ------------------------------------------------------------------ */
-/* Helpers                                                             */
+/* One-time migration: legacy flat `gallery` table -> Project + Images */
 /* ------------------------------------------------------------------ */
-const settings = {
-  all() {
-    const out = {};
-    for (const r of db.prepare('SELECT key, value FROM settings').all()) out[r.key] = r.value;
-    return out;
-  },
-  get(key) { return db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value ?? ''; },
-  set(key, value) { db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value ?? '')); },
-  setMany(obj) { db.transaction(() => { for (const [k, v] of Object.entries(obj)) settings.set(k, v); })(); },
-  keys() { return Object.keys(DEFAULT_SETTINGS); },
-};
+function migrateLegacyGallery() {
+  const hasGalleryTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='gallery'`).get();
+  if (!hasGalleryTable) return;
 
-const gallery = {
-  all()      { return db.prepare('SELECT * FROM gallery ORDER BY sort, id').all(); },
-  featured() { return db.prepare('SELECT * FROM gallery WHERE featured = 1 ORDER BY sort, id LIMIT 3').all(); },
-  get(id)    { return db.prepare('SELECT * FROM gallery WHERE id = ?').get(id); },
-  create(g) {
-    const sort = (db.prepare('SELECT COALESCE(MAX(sort), -1) AS m FROM gallery').get().m) + 1;
-    return db.prepare(`INSERT INTO gallery (title, alt, category, src_full, src_thumb, width, height, external, featured, sort)
-                       VALUES (@title, @alt, @category, @src_full, @src_thumb, @width, @height, @external, @featured, @sort)`)
-             .run({ external: 0, featured: 0, ...g, sort }).lastInsertRowid;
-  },
-  update(id, g) {
-    return db.prepare('UPDATE gallery SET title = @title, alt = @alt, category = @category, featured = @featured WHERE id = @id').run({ ...g, id });
-  },
-  reorder(ids) {
-    const up = db.prepare('UPDATE gallery SET sort = ? WHERE id = ?');
-    db.transaction(() => ids.forEach((id, i) => up.run(i, id)))();
-  },
-  remove(id) { return db.prepare('DELETE FROM gallery WHERE id = ?').run(id); },
-};
+  const legacyRows = db.prepare('SELECT * FROM gallery ORDER BY sort, id').all();
+  const projectCount = db.prepare('SELECT COUNT(*) AS n FROM projects').get().n;
 
-const services = {
-  all(activeOnly = false) {
-    const rows = db.prepare(`SELECT * FROM services ${activeOnly ? 'WHERE active = 1' : ''} ORDER BY sort, id`).all();
-    return rows.map(r => ({ ...r, includes: safeJson(r.includes, []) }));
-  },
-  get(id) { const r = db.prepare('SELECT * FROM services WHERE id = ?').get(id); return r && { ...r, includes: safeJson(r.includes, []) }; },
-  create(s) {
-    const sort = (db.prepare('SELECT COALESCE(MAX(sort), -1) AS m FROM services').get().m) + 1;
-    return db.prepare('INSERT INTO services (name, icon, price, description, includes, cta, active, sort) VALUES (@name, @icon, @price, @description, @includes, @cta, @active, @sort)')
-             .run({ ...s, includes: JSON.stringify(s.includes || []), sort }).lastInsertRowid;
-  },
-  update(id, s) {
-    return db.prepare('UPDATE services SET name = @name, icon = @icon, price = @price, description = @description, includes = @includes, cta = @cta, active = @active WHERE id = @id')
-             .run({ ...s, includes: JSON.stringify(s.includes || []), id });
-  },
-  reorder(ids) {
-    const up = db.prepare('UPDATE services SET sort = ? WHERE id = ?');
-    db.transaction(() => ids.forEach((id, i) => up.run(i, id)))();
-  },
-  remove(id) { return db.prepare('DELETE FROM services WHERE id = ?').run(id); },
-};
+  // Only migrate if projects haven't already been seeded/created from this legacy data.
+  if (legacyRows.length && projectCount === 0) {
+    const catBySlug = Object.fromEntries(db.prepare('SELECT id, slug, label FROM categories').all().map(c => [c.slug, c]));
+    const byCategory = new Map();
+    for (const row of legacyRows) {
+      if (!byCategory.has(row.category)) byCategory.set(row.category, []);
+      byCategory.get(row.category).push(row);
+    }
+    const insProject = db.prepare(`INSERT INTO projects (title, slug, description, category_id, cover_image, featured, published, sort)
+                                    VALUES (@title, @slug, '', @category_id, @cover_image, @featured, 1, @sort)`);
+    const insImage = db.prepare(`INSERT INTO images (project_id, src_full, src_thumb, width, height, caption, alt, sort)
+                                  VALUES (@project_id, @src_full, @src_thumb, @width, @height, @caption, @alt, @sort)`);
+    db.transaction(() => {
+      let sort = 0;
+      for (const [catSlug, rows] of byCategory) {
+        const cat = catBySlug[catSlug];
+        const cover = rows.find(r => r.featured) || rows[0];
+        const projectId = insProject.run({
+          title: `${cat ? cat.label : catSlug} collection`,
+          slug: cat ? cat.slug : slugify(catSlug),
+          category_id: cat ? cat.id : null,
+          cover_image: cover.src_thumb,
+          featured: rows.some(r => r.featured) ? 1 : 0,
+          sort: sort++,
+        }).lastInsertRowid;
+        rows.forEach((r, i) => insImage.run({
+          project_id: projectId, src_full: r.src_full, src_thumb: r.src_thumb,
+          width: r.width, height: r.height, caption: r.title, alt: r.alt, sort: i,
+        }));
+      }
+    })();
+    logger.info(`Migrated ${legacyRows.length} legacy gallery photo(s) into ${byCategory.size} project(s).`);
+  }
 
-const enquiries = {
-  all(status) {
-    return status
-      ? db.prepare('SELECT * FROM enquiries WHERE status = ? ORDER BY created_at DESC').all(status)
-      : db.prepare('SELECT * FROM enquiries ORDER BY created_at DESC').all();
-  },
-  counts() {
-    const out = { total: 0 };
-    for (const r of db.prepare('SELECT status, COUNT(*) AS n FROM enquiries GROUP BY status').all()) { out[r.status] = r.n; out.total += r.n; }
-    return out;
-  },
-  get(id) { return db.prepare('SELECT * FROM enquiries WHERE id = ?').get(id); },
-  create(e) {
-    return db.prepare(`INSERT INTO enquiries (name, email, phone, service, preferred_date, message, ip)
-                       VALUES (@name, @email, @phone, @service, @preferred_date, @message, @ip)`).run(e).lastInsertRowid;
-  },
-  setStatus(id, status) { return db.prepare('UPDATE enquiries SET status = ? WHERE id = ?').run(status, id); },
-  remove(id) { return db.prepare('DELETE FROM enquiries WHERE id = ?').run(id); },
-};
+  db.exec('ALTER TABLE gallery RENAME TO gallery_legacy_backup');
+  logger.info('Renamed legacy gallery table to gallery_legacy_backup (kept, not deleted).');
+}
+migrateLegacyGallery();
+seedProjectsFallback(); // only fires if there was no legacy gallery table AND projects is still empty
+seedServices();
+seedUsers();
 
-const users = {
-  byUsername(u) { return db.prepare('SELECT * FROM users WHERE username = ?').get(u); },
-  setPassword(id, password) { return db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(password, 12), id); },
-};
+/* One-time rebrand: only overwrite settings that still hold the old defaults, never a customized value. */
+function migrateBrandRename() {
+  for (const [key, oldValue] of Object.entries(OLD_BRAND_DEFAULTS)) {
+    const current = db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value;
+    if (current === oldValue) {
+      db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(DEFAULT_SETTINGS[key], key);
+      logger.info(`Renamed settings.${key}: "${oldValue}" -> "${DEFAULT_SETTINGS[key]}"`);
+    }
+  }
+}
+migrateBrandRename();
 
-function safeJson(str, fallback) { try { return JSON.parse(str); } catch { return fallback; } }
-
-module.exports = { db, settings, gallery, services, enquiries, users, safeJson, DEFAULT_SETTINGS };
+module.exports = { db, DEFAULT_SETTINGS, DEFAULT_CATEGORIES };

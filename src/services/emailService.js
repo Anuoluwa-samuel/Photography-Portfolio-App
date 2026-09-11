@@ -1,5 +1,7 @@
 // Email notifications for new enquiries. If SMTP isn't configured the message is logged instead.
 const nodemailer = require('nodemailer');
+const { esc } = require('../utils/text');
+const logger = require('../utils/logger')('mail');
 
 let transporter = null;
 if (process.env.SMTP_HOST) {
@@ -10,8 +12,6 @@ if (process.env.SMTP_HOST) {
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
   });
 }
-
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function sendEnquiryNotification(e, siteName) {
   const to = process.env.NOTIFY_EMAIL;
@@ -33,7 +33,7 @@ async function sendEnquiryNotification(e, siteName) {
     </div>`;
 
   if (!transporter || !to) {
-    console.log(`[mail] SMTP not configured — enquiry logged only.\n${text}\n`);
+    logger.info(`SMTP not configured — enquiry logged only.\n${text}\n`);
     return { logged: true };
   }
   return transporter.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_USER, to, replyTo: e.email, subject, text, html });

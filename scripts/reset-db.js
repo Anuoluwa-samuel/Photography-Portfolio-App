@@ -8,5 +8,5 @@ for (const sub of ['gallery', 'site']) {
   const dir = path.join(upDir, sub);
   if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) if (f !== '.gitkeep') fs.rmSync(path.join(dir, f));
 }
-require('../src/db'); // re-creates and seeds
+require('../src/config/database'); // re-creates and seeds
 console.log('Database reset and re-seeded with placeholder content.');

@@ -1,7 +1,7 @@
 {
-  "name": "adeyemi-visuals",
+  "name": "yito-shot-it",
   "version": "1.0.0",
-  "description": "Photographer portfolio website with admin dashboard (Node.js + Express + SQLite)",
+  "description": "YIT0 SHOT IT — photography portfolio with a project-based admin CMS (Node.js + Express + SQLite)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -282,6 +282,11 @@ section{position:relative;padding:clamp(80px,10vw,140px) 0}
 .is-fallback .tile-cap,.is-fallback figcaption{opacity:1}
 .portfolio-more{margin-top:40px;text-align:center;color:var(--dim);font-size:.85rem}
 
+/* project detail page: category / location / date chips under the title */
+.project-meta{display:flex;flex-wrap:wrap;gap:14px 28px;margin-top:32px;color:var(--muted);font-size:.85rem}
+.project-meta span{display:flex;align-items:center;gap:8px}
+.project-meta svg{width:16px;height:16px;stroke:var(--accent);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
 /* ==================================================================
    LIGHTBOX
 ================================================================== */
