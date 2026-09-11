@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <a class="brand" href="/" target="_blank" rel="noopener"><strong id="brandName">Admin</strong><small>dashboard</small></a>
+    <nav class="side-nav" id="sideNav">
+      <a href="#/" data-view="dashboard">Overview</a>
+      <a href="#/enquiries" data-view="enquiries">Enquiries <span class="pill" id="newPill" hidden>0</span></a>
+      <a href="#/gallery" data-view="gallery">Gallery</a>
+      <a href="#/services" data-view="services">Services</a>
+      <a href="#/settings" data-view="settings">Site content</a>
+      <a href="#/account" data-view="account">Account</a>
+    </nav>
+    <div class="side-foot">
+      <a href="/" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">View site ↗</a>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Sign out</button>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+    <h1 id="viewTitle">Overview</h1>
+    <span class="who" id="who"></span>
+  </header>
+
+  <main class="content" id="view" aria-live="polite"></main>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<!-- Modal -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true">
+    <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script src="/admin/admin.js"></script>
+</body>
+</html>

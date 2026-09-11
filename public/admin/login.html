@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — Admin</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body class="login-body">
+<main class="login-card">
+  <p class="eyebrow">Admin</p>
+  <h1>Sign <em>in</em></h1>
+  <form id="loginForm" novalidate>
+    <div class="field"><label for="u">Username</label><input id="u" name="username" autocomplete="username" required autofocus></div>
+    <div class="field"><label for="p">Password</label><input id="p" name="password" type="password" autocomplete="current-password" required></div>
+    <p class="form-error" id="err" role="alert"></p>
+    <button class="btn btn-primary" type="submit" id="btn">Sign in</button>
+  </form>
+  <p class="login-foot"><a href="/">← Back to the site</a></p>
+</main>
+<script>
+  const f = document.getElementById('loginForm'), err = document.getElementById('err'), btn = document.getElementById('btn');
+  f.addEventListener('submit', async e => {
+    e.preventDefault(); err.textContent = ''; btn.disabled = true;
+    try {
+      const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(f))) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Sign in failed.');
+      location.href = '/admin';
+    } catch (ex) { err.textContent = ex.message; btn.disabled = false; }
+  });
+</script>
+</body>
+</html>
