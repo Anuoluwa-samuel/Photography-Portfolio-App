@@ -1,11 +1,14 @@
 // YIT0 SHOT IT — photography portfolio + admin CMS
-// Node.js 18+ · Express 5 · SQLite (better-sqlite3) · EJS · Sharp · Nodemailer
+// Node.js 20.9+ · Express 5 (admin, API, uploads) · Next.js 16 (public site) · SQLite · Sharp · Nodemailer
+if (process.argv.includes('--production')) process.env.NODE_ENV = 'production';
 require('dotenv').config();
 
+const http = require('http');
 const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
 const cookieSession = require('cookie-session');
+const next = require('next');
 
 const env = require('./src/config/environment');
 require('./src/config/database'); // connects + runs schema/migrations before anything else touches the db
@@ -13,13 +16,15 @@ require('./src/config/database'); // connects + runs schema/migrations before an
 const publicRoutes = require('./src/routes/public');
 const adminRoutes = require('./src/routes/admin');
 const { requireAdmin } = require('./src/middleware/auth');
-const { notFound, errorHandler } = require('./src/middleware/errorHandler');
+const { apiNotFound, errorHandler } = require('./src/middleware/errorHandler');
 
+const dev = !env.isProd;
 const app = express();
+const server = http.createServer(app);
+const nextApp = next({ dev, dir: __dirname, httpServer: server });
+const handleNext = nextApp.getRequestHandler();
 
 app.set('trust proxy', 1);          // correct req.ip / secure cookies behind a reverse proxy (Render, Railway, nginx)
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
 app.disable('x-powered-by');
 
 /* ---------- Security headers ---------- */
@@ -27,11 +32,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],                   // inline gallery data + JSON-LD
+      // Next.js streams page data through inline scripts; dev mode also needs eval for React's debug tooling.
+      scriptSrc: ["'self'", "'unsafe-inline'", ...(dev ? ["'unsafe-eval'"] : [])],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com'], // placeholder photos; remove once you upload your own
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", ...(dev ? ['ws:', 'wss:'] : [])],             // dev: hot reload websocket
       frameAncestors: ["'none'"],
       upgradeInsecureRequests: env.isProd ? [] : null,
     },
@@ -73,12 +79,21 @@ app.get('/robots.txt', (req, res) => res.type('text/plain').send(
 ));
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
+/* ---------- Public site (Next.js app/ directory) ---------- */
+app.use('/api', apiNotFound);
+app.use((req, res) => handleNext(req, res));
+
 /* ---------- Errors ---------- */
-app.use(notFound);
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
-  console.log(`\n  ${env.SITE_NAME} is running`);
-  console.log(`  Site:   http://localhost:${env.PORT}`);
-  console.log(`  Admin:  http://localhost:${env.PORT}/admin\n`);
+nextApp.prepare().then(() => {
+  server.listen(env.PORT, () => {
+    console.log(`\n  ${env.SITE_NAME} is running (${dev ? 'development' : 'production'})`);
+    console.log(`  Site:   http://localhost:${env.PORT}`);
+    console.log(`  Admin:  http://localhost:${env.PORT}/admin\n`);
+  });
+}).catch(err => {
+  console.error(err);
+  if (!dev) console.error('\n  Did you run `npm run build` first?\n');
+  process.exit(1);
 });

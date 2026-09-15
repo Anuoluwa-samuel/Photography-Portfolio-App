@@ -1,0 +1,254 @@
+@import 'tailwindcss' source(none);
+@import 'tw-animate-css'; /* enter/exit animations used by shadcn components (dialog) */
+@source '../app';
+@source '../components';
+@source '../lib';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ==================================================================
+   DESIGN TOKENS — light (default, whitish gradient) + dark
+================================================================== */
+:root {
+  --background: #f6f9f9;
+  --foreground: #0f1516;
+  --muted-foreground: #525d5e;
+  --dim: #6f7a7b;
+  --card: #ffffff;
+  --card-2: #e9eff0;
+  --border: rgba(15, 21, 22, 0.09);
+  --ghost-border: rgba(15, 21, 22, 0.18);
+  --input: rgba(255, 255, 255, 0.75);
+  --brand: #0d8a80;
+  --brand-bright: #1fd1c1;
+  --brand-hover: #0a766e;
+  --brand-foreground: #ffffff;
+  --brand-glow: rgba(31, 209, 193, 0.38);
+  --brand-soft: rgba(13, 138, 128, 0.12);
+  --danger: #c23b3b;
+  --shadow-deep: rgba(20, 45, 50, 0.35);
+  --spill: rgba(31, 209, 193, 0.26);
+  --wm: rgba(13, 138, 128, 0.05);
+
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-strong: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --glass-sheen: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 0 0 1px rgba(15, 21, 22, 0.05), 0 12px 40px -14px rgba(20, 60, 65, 0.22);
+
+  --page-gradient:
+    radial-gradient(1100px 700px at 88% -8%, rgba(31, 209, 193, 0.16), transparent 60%),
+    radial-gradient(900px 650px at -12% 45%, rgba(148, 187, 233, 0.18), transparent 60%),
+    radial-gradient(800px 600px at 60% 110%, rgba(31, 209, 193, 0.09), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #f5f8f9 42%, #ebf1f2 100%);
+  --grain-opacity: 0.025;
+
+  --max: 1240px;
+  --gutter: clamp(20px, 5vw, 72px);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --nav-h: 96px;
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #f2f4f4;
+  --muted-foreground: #a4acad;
+  --dim: #626c6d;
+  --card: #141819;
+  --card-2: #191e1f;
+  --border: rgba(255, 255, 255, 0.08);
+  --ghost-border: rgba(255, 255, 255, 0.2);
+  --input: rgba(16, 19, 20, 0.75);
+  --brand: #1fd1c1;
+  --brand-bright: #1fd1c1;
+  --brand-hover: #3ae0d1;
+  --brand-foreground: #000000;
+  --brand-glow: rgba(31, 209, 193, 0.45);
+  --brand-soft: rgba(31, 209, 193, 0.12);
+  --danger: #ff8a8a;
+  --shadow-deep: rgba(0, 0, 0, 0.9);
+  --spill: rgba(31, 209, 193, 0.35);
+  --wm: rgba(31, 209, 193, 0.04);
+
+  --glass-bg: rgba(20, 24, 25, 0.5);
+  --glass-bg-strong: rgba(11, 13, 14, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-highlight: rgba(255, 255, 255, 0.07);
+  --glass-sheen: rgba(255, 255, 255, 0.05);
+  --glass-shadow: 0 12px 40px -14px rgba(0, 0, 0, 0.7);
+
+  --page-gradient:
+    radial-gradient(900px 600px at 85% -10%, rgba(31, 209, 193, 0.1), transparent 60%),
+    radial-gradient(700px 500px at -10% 60%, rgba(31, 209, 193, 0.05), transparent 60%),
+    #000000;
+  --grain-opacity: 0.035;
+}
+
+@media (max-width: 900px) {
+  :root { --nav-h: 80px; }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-dim: var(--dim);
+  --color-card: var(--card);
+  --color-card-2: var(--card-2);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-brand: var(--brand);
+  --color-brand-bright: var(--brand-bright);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-danger: var(--danger);
+
+  /* shadcn / 21st.dev token aliases, so drop-in components pick up the brand teal */
+  --color-primary: var(--brand);
+  --color-primary-foreground: var(--brand-foreground);
+
+  --font-display: var(--font-outfit), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ==================================================================
+   GLASSMORPHISM
+================================================================== */
+@utility glass {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight), var(--glass-shadow);
+}
+@utility glass-strong {
+  background-color: var(--glass-bg-strong);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background-color: var(--card); }
+}
+
+/* ==================================================================
+   BASE
+================================================================== */
+@layer base {
+  /* clip (not hidden): decorative glows/watermarks must never widen the mobile layout viewport */
+  html { scroll-behavior: smooth; scroll-padding-top: var(--nav-h); -webkit-text-size-adjust: 100%; overflow-x: clip; }
+  body {
+    background: var(--background); color: var(--foreground);
+    font-family: var(--font-sans); font-size: 16px; line-height: 1.7; font-weight: 300;
+    overflow-x: clip; -webkit-font-smoothing: antialiased;
+  }
+  /* whitish (light) / teal-on-black (dark) ambient gradient + fine grain */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none;
+    background: var(--page-gradient);
+  }
+  body::after {
+    content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  strong { font-weight: 500; }
+  h3 { font-family: var(--font-display); font-weight: 500; }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+  /* Viewfinder crosshair over bare background only — toggled by SiteSonar (and admin effects.js) */
+  html[data-sonar-cursor='on'], html[data-sonar-cursor='on'] body * { cursor: crosshair; }
+  ::selection { background: var(--brand-soft); }
+}
+
+/* ==================================================================
+   SHARED COMPONENT CLASSES
+================================================================== */
+@layer components {
+  .site-container { width: min(var(--max), 100% - 2 * var(--gutter)); margin-inline: auto; position: relative; z-index: 1; }
+  .section { position: relative; padding-block: clamp(80px, 10vw, 144px); }
+  .skip { position: absolute; left: -999px; top: 12px; z-index: 1000; background: var(--brand); color: var(--brand-foreground); padding: 8px 16px; border-radius: 8px; font-weight: 600; }
+  .skip:focus { left: 12px; }
+
+  .eyebrow { font-family: var(--font-display); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.28em; text-transform: uppercase; color: var(--brand); }
+  .display {
+    font-family: var(--font-display); font-weight: 400; text-transform: uppercase;
+    line-height: 1.02; letter-spacing: -0.005em; margin-top: 16px; font-size: clamp(2.5rem, 6.2vw, 5.2rem);
+  }
+  .display em { font-style: normal; color: var(--brand); }
+  .rule { width: 56px; height: 2px; background: var(--brand); margin: 24px 0 32px; }
+  .lead { color: var(--muted-foreground); max-width: 56ch; }
+
+  .section-head { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 40px; align-items: end; }
+  .section-head .lead { padding-bottom: 8px; }
+  @media (max-width: 900px) { .section-head { grid-template-columns: 1fr; gap: 20px; } }
+
+  /* giant watermark letters */
+  .wm {
+    position: absolute; left: 50%; top: -6%; transform: translateX(-50%);
+    font-family: var(--font-display); font-weight: 700; line-height: 0.8; font-size: clamp(16rem, 42vw, 38rem);
+    color: var(--wm); pointer-events: none; user-select: none; z-index: 0;
+  }
+  .wm.right { left: auto; right: -3%; transform: none; }
+  .wm.left { left: -3%; transform: none; }
+  @media (max-width: 900px) { .wm { font-size: clamp(12rem, 60vw, 24rem); } }
+
+
+  /* hero portrait */
+  .hero-frame {
+    position: relative; z-index: 1; aspect-ratio: 4 / 5; border-radius: 32px; overflow: hidden; background: var(--card);
+    box-shadow: 0 0 70px -10px var(--brand-glow), 0 50px 90px -40px var(--shadow-deep);
+  }
+  .hero-frame-light {
+    position: absolute; inset: 0; mix-blend-mode: soft-light;
+    background: linear-gradient(215deg, rgba(31, 209, 193, 0.55) 0%, transparent 48%), linear-gradient(to top, rgba(11, 13, 14, 0.75), transparent 45%);
+  }
+
+  .select-arrow {
+    appearance: none; -webkit-appearance: none; padding-right: 48px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%231fd1c1' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 16px center;
+  }
+
+  /* page-load sequence (hero) */
+  .intro { opacity: 0; transform: translateY(22px); animation: intro 1s var(--ease) forwards; animation-delay: calc(var(--i, 0) * 0.12s + 0.35s); }
+  .intro-media { transform: scale(0.96); }
+
+  /* scroll reveal */
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.9s var(--ease), transform 0.9s var(--ease); transition-delay: var(--d, 0s); }
+  .reveal-img { opacity: 0; transform: scale(1.04); transition: opacity 1s var(--ease), transform 1.2s var(--ease); transition-delay: var(--d, 0s); }
+  .card-reveal { opacity: 0; transition: opacity 0.7s var(--ease); transition-delay: var(--d, 0s); }
+  .reveal.in, .reveal-img.in { opacity: 1; transform: none; }
+  .card-reveal.in { opacity: 1; }
+
+  .tile-in { animation: tile-in 0.7s var(--ease) both; }
+
+  /* page curtain */
+  .curtain { position: fixed; inset: 0; z-index: 999; background: var(--background); display: grid; place-items: center; transition: opacity 0.7s var(--ease), visibility 0.7s; }
+  .curtain.done { opacity: 0; visibility: hidden; }
+  .curtain strong { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.5em; text-transform: uppercase; color: var(--brand); font-size: 1.1rem; padding-left: 0.5em; animation: pulse 1.4s ease-in-out infinite; }
+}
+
+@keyframes intro { to { opacity: 1; transform: none; } }
+@keyframes tile-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+/* Carousels — "develop": a print coming up in the tray (blurred, grey, over-exposed → sharp); "exposure": auto-advance timer */
+@keyframes develop {
+  from { opacity: 0; filter: blur(12px) grayscale(1) brightness(1.4); transform: translateY(16px); }
+  60% { opacity: 1; }
+  to { opacity: 1; filter: none; transform: none; }
+}
+@keyframes exposure { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.develop-in { animation: develop 1s var(--ease) both; }
+/* Featured reel "rack focus": --focus (0–1) is set per slide from the carousel's scroll position */
+.reel-frame {
+  --focus: 1;
+  scale: calc(0.84 + 0.16 * var(--focus));
+  opacity: calc(0.4 + 0.6 * var(--focus));
+  filter: blur(calc((1 - var(--focus)) * 6px)) grayscale(calc((1 - var(--focus)) * 0.85)) brightness(calc(0.72 + 0.28 * var(--focus)));
+  will-change: scale, filter, opacity;
+}
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+/* reduced motion: keep the site usable, drop the choreography */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.001s !important; animation-delay: 0s !important; transition-duration: 0.001s !important; }
+  .reveal, .reveal-img, .card-reveal, .intro { opacity: 1; transform: none; animation: none; }
+}

@@ -1,26 +1,32 @@
 # YIT0 SHOT IT — Photography Portfolio + Admin CMS
 
-A premium, dark-teal photography portfolio built around **Projects**: each project is a titled, categorized collection of photos with its own page at `/projects/:slug`. Everything — projects, categories, services, homepage copy, enquiries — is managed from a built-in admin CMS. The whole app runs from one Node.js process with a single SQLite file, so there is no separate database server to install.
+A premium teal photography portfolio (whitish-gradient light theme + dark mode) built around **Projects**: each project is a titled, categorized collection of photos with its own page at `/projects/:slug`. Everything — projects, categories, services, homepage copy, enquiries — is managed from a built-in admin CMS. The whole app runs from one Node.js process with a single SQLite file, so there is no separate database server to install.
 
 | Layer | Choice | Why |
 |---|---|---|
-| Runtime | **Node.js 18+** | One language front to back |
+| Runtime | **Node.js 20.9+** | One language front to back |
 | Server | **Express 5** | Small, well documented |
 | Database | **SQLite** via `better-sqlite3` | Zero setup, one file, easy backups |
-| Templates | **EJS** | Homepage & project pages are server-rendered from the database → great for SEO |
+| Public site | **Next.js 16 (App Router) + React 19 + TypeScript** | Homepage & project pages are server-rendered from the database → great for SEO |
+| Styling | **Tailwind CSS v4 + shadcn structure** | Design tokens for light/dark themes, glassmorphism utilities, `components/ui` |
+| Motion | **framer-motion + lucide-react** | Hover-gradient 3D nav bar, theme toggle icons |
 | Images | **Multer + Sharp** | Uploads are auto-converted to WebP (2000px full + 900px thumb) |
 | Email | **Nodemailer** | New enquiries emailed to the photographer (optional) |
 | Auth | **bcryptjs + cookie-session** | Single admin login, signed cookie, rate-limited |
 | Hardening | **Helmet + express-rate-limit** | CSP, secure headers, spam/brute-force limits |
-| Frontend | Vanilla HTML/CSS/JS | No build step, no framework lock-in |
+| Admin frontend | Vanilla HTML/CSS/JS | No build step |
 
 ## 1. Run it locally (5 minutes)
 
 ```bash
-# 1. Install Node.js 18 or newer from https://nodejs.org (LTS is fine)
+# 1. Install Node.js 20.9 or newer from https://nodejs.org (LTS is fine)
 # 2. In this folder:
 npm install
 cp .env.example .env      # Windows: copy .env.example .env
+npm run dev               # development (hot reload)
+
+# production
+npm run build
 npm start
 ```
 
@@ -61,7 +67,7 @@ Fill in the `SMTP_*` values in `.env` (Gmail app password, Zoho, Brevo, Resend S
 **Before going live:** set `NODE_ENV=production`, a long random `SESSION_SECRET`, a strong `ADMIN_PASSWORD`, and `SITE_URL` to your real domain (used for canonical/Open Graph/sitemap URLs).
 
 - **Render / Railway / Fly.io** — connect the repo; `render.yaml` is included (attach a persistent disk so uploads and the DB survive deploys).
-- **VPS (Ubuntu + nginx)** — `npm ci --omit=dev`, run with `pm2 start server.js --name portfolio`, reverse-proxy port 3000 through nginx with a Let's Encrypt certificate.
+- **VPS (Ubuntu + nginx)** — `npm ci && npm run build`, run with `pm2 start server.js --name portfolio -- --production`, reverse-proxy port 3000 through nginx with a Let's Encrypt certificate.
 - **Docker** — `docker compose up -d` (Dockerfile + docker-compose.yml included; `data/` and `public/uploads/` are mounted volumes).
 
 Shared cPanel hosting without Node.js support will not run this project.
@@ -69,7 +75,15 @@ Shared cPanel hosting without Node.js support will not run this project.
 ## 6. Project structure
 
 ```
-server.js                        Express app: security headers, sessions, static files, routes
+server.js                        Express app: security headers, sessions, static files, API/admin routes;
+                                 hands every other request to Next.js
+app/                             Next.js App Router: layout (fonts, theme), homepage, projects/[slug], not-found, globals.css
+components/
+  ui/                            shadcn-style primitives (hover-gradient-nav-bar, glass-card)
+  site/                          Page sections, nav, footer, portfolio grid, lightbox, enquiry form
+  icons/sprite.tsx               Inline SVG icon set (ids used by the CMS)
+  theme-provider.tsx, theme-toggle.tsx
+lib/                             data.ts (reads src/models), utils.ts (cn), site.ts (nav links), text.tsx
 src/
   config/
     environment.js               Env var reads/validation
@@ -83,24 +97,17 @@ src/
     auth.js                      requireAdmin / login / logout
     upload.js                    Multer config for image uploads
     validation.js                Public enquiry-form validation
-    errorHandler.js              404 + error JSON/HTML responses
+    errorHandler.js              API 404 + error JSON/HTML responses
   services/
     imageService.js              Sharp pipeline (upload → WebP full + thumb)
     emailService.js               Enquiry email notification
   utils/
     slugify.js, text.js, logger.js
   routes/
-    public.js                    GET /, GET /projects/:slug, GET /sitemap.xml, public JSON, POST /api/enquiries
+    public.js                    GET /sitemap.xml, public JSON, POST /api/enquiries
     admin.js                     /api/admin/*  (projects, categories, services, enquiries, settings, auth)
   constants.js                   Icons, socials, enquiry statuses (categories now live in the database)
-views/public/
-  index.ejs                      Homepage (projects grid, featured, about, services, contact)
-  project.ejs                    One project's detail page + lightbox gallery
-  _sprite.ejs                    Inline SVG icon set
-  404.ejs
 public/
-  css/site.css                   Design system + site styles
-  js/site.js                     Nav, reveal animations, portfolio filters, lightbox, contact form
   admin/                         Dashboard (login.html, index.html, admin.css, admin.js)
   uploads/                       Uploaded photos (gallery/, site/)
 scripts/
@@ -112,7 +119,7 @@ data/site.db                     SQLite database (created on first run)
 ## 7. API summary
 
 Public
-- `GET /` homepage · `GET /projects/:slug` · `GET /sitemap.xml`
+- `GET /` homepage · `GET /projects/:slug` (Next.js) · `GET /sitemap.xml`
 - `GET /api/projects` · `GET /api/categories` · `GET /api/services` · `POST /api/enquiries`
 
 Admin (session required)

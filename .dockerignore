@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+.env
+data/*.db
+data/*.db-*
+public/uploads/gallery/*
+public/uploads/site/*

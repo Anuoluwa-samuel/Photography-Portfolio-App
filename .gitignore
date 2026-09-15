@@ -6,3 +6,6 @@ data/*.db-*
 public/uploads/gallery/*
 public/uploads/site/*
 !public/uploads/**/.gitkeep
+.next/
+next-env.d.ts
+*.tsbuildinfo
