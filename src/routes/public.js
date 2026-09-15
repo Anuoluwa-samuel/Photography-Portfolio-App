@@ -1,4 +1,4 @@
-// Public site: server-rendered pages + read-only JSON + the enquiry form.
+// Public API: read-only JSON + the enquiry form + sitemap. The pages themselves are rendered by Next.js (app/).
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const publicController = require('../controllers/publicController');
@@ -7,8 +7,6 @@ const { validateEnquiry } = require('../middleware/validation');
 
 const router = express.Router();
 
-router.get('/', publicController.home);
-router.get('/projects/:slug', publicController.projectDetail);
 router.get('/sitemap.xml', publicController.sitemap);
 
 router.get('/api/projects', publicController.apiProjects);

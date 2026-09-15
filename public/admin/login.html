@@ -5,21 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sign in — YIT0 SHOT IT Admin</title>
 <meta name="robots" content="noindex">
+<script src="/admin/theme.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/admin/admin.css">
 </head>
 <body class="login-body">
+<button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" title="Toggle dark mode">
+  <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+  <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+</button>
+
+<div class="login-stage" data-bokeh>
 <main class="login-card">
   <p class="eyebrow">Admin</p>
   <h1>Sign <em>in</em></h1>
   <form id="loginForm" novalidate>
-    <div class="field"><label for="u">Username</label><input id="u" name="username" autocomplete="username" required autofocus></div>
-    <div class="field"><label for="p">Password</label><input id="p" name="password" type="password" autocomplete="current-password" required></div>
+    <div class="float-field">
+      <input id="u" name="username" autocomplete="username" placeholder=" " required autofocus>
+      <label for="u"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Username</label>
+      <span class="float-line" aria-hidden="true"></span>
+    </div>
+    <div class="float-field">
+      <input id="p" name="password" type="password" autocomplete="current-password" placeholder=" " required>
+      <label for="p"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Password</label>
+      <span class="float-line" aria-hidden="true"></span>
+    </div>
     <p class="form-error" id="err" role="alert"></p>
-    <button class="btn btn-primary" type="submit" id="btn">Sign in</button>
+    <button class="btn btn-primary" type="submit" id="btn">
+      Sign in
+      <svg class="btn-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      <svg class="btn-aperture" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m14.31 8 5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16 3.95 6.06M14.31 16H2.83m13.79-4-5.74 9.94"/></svg>
+    </button>
   </form>
   <p class="login-foot"><a href="/">← Back to the site</a></p>
 </main>
+</div>
+
 <script>
   const f = document.getElementById('loginForm'), err = document.getElementById('err'), btn = document.getElementById('btn');
   f.addEventListener('submit', async e => {
@@ -32,5 +53,6 @@
     } catch (ex) { err.textContent = ex.message; btn.disabled = false; }
   });
 </script>
+<script src="/admin/effects.js" defer></script>
 </body>
 </html>

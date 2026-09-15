@@ -1,9 +1,9 @@
 const env = require('../config/environment');
 const logger = require('../utils/logger')('error');
 
-function notFound(req, res) {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ success: false, message: 'Not found', error: 'NOT_FOUND' });
-  res.status(404).render('public/404');
+// Unknown /api/* routes get JSON; every other unmatched path falls through to Next.js (which renders app/not-found.tsx).
+function apiNotFound(req, res) {
+  res.status(404).json({ success: false, message: 'Not found', error: 'NOT_FOUND' });
 }
 
 function errorHandler(err, req, res, next) { // eslint-disable-line no-unused-vars
@@ -14,4 +14,4 @@ function errorHandler(err, req, res, next) { // eslint-disable-line no-unused-va
   res.status(status).send(message);
 }
 
-module.exports = { notFound, errorHandler };
+module.exports = { apiNotFound, errorHandler };
