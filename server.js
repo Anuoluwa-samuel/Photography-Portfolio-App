@@ -17,6 +17,7 @@ const publicRoutes = require('./src/routes/public');
 const adminRoutes = require('./src/routes/admin');
 const { requireAdmin } = require('./src/middleware/auth');
 const { apiNotFound, errorHandler } = require('./src/middleware/errorHandler');
+const { versionedHtml } = require('./src/utils/assetVersion');
 
 const dev = !env.isProd;
 const app = express();
@@ -66,12 +67,17 @@ app.use('/uploads', express.static(env.UPLOAD_DIR, { maxAge: env.isProd ? '30d' 
 app.use(publicRoutes);
 app.use(adminRoutes);
 
+// Admin pages: asset URLs carry a content hash (?v=…) so long-cached CSS/JS refresh right after a deploy.
+const sendAdminPage = (res, file) => {
+  res.set('Cache-Control', 'no-cache');
+  res.type('html').send(versionedHtml(path.join(__dirname, 'public', 'admin', file), path.join(__dirname, 'public'), env.isProd));
+};
 app.get('/admin/login', (req, res) => {
   if (req.session?.userId) return res.redirect('/admin');
-  res.sendFile(path.join(__dirname, 'public', 'admin', 'login.html'));
+  sendAdminPage(res, 'login.html');
 });
 app.get(['/admin', '/admin/*rest'], requireAdmin, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+  sendAdminPage(res, 'index.html');
 });
 
 app.get('/robots.txt', (req, res) => res.type('text/plain').send(

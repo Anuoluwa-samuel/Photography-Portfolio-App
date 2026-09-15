@@ -9,12 +9,13 @@ A premium teal photography portfolio (whitish-gradient light theme + dark mode) 
 | Database | **SQLite** via `better-sqlite3` | Zero setup, one file, easy backups |
 | Public site | **Next.js 16 (App Router) + React 19 + TypeScript** | Homepage & project pages are server-rendered from the database → great for SEO |
 | Styling | **Tailwind CSS v4 + shadcn structure** | Design tokens for light/dark themes, glassmorphism utilities, `components/ui` |
-| Motion | **framer-motion + lucide-react** | Hover-gradient 3D nav bar, theme toggle icons |
+| Motion | **framer-motion + lucide-react + Canvas 2D** | Hover-gradient nav, silk background, sonar dot field, bokeh — all respect `prefers-reduced-motion` |
+| Carousels & dialogs | **Embla (shadcn Carousel) + Radix (shadcn Dialog)** | Featured "rack focus" reel, endless portfolio strip, booking popup |
 | Images | **Multer + Sharp** | Uploads are auto-converted to WebP (2000px full + 900px thumb) |
 | Email | **Nodemailer** | New enquiries emailed to the photographer (optional) |
 | Auth | **bcryptjs + cookie-session** | Single admin login, signed cookie, rate-limited |
 | Hardening | **Helmet + express-rate-limit** | CSP, secure headers, spam/brute-force limits |
-| Admin frontend | Vanilla HTML/CSS/JS | No build step |
+| Admin frontend | Vanilla HTML/CSS/JS | No build step; same look as the site via `admin.css`, `theme.js`, `effects.js` |
 
 ## 1. Run it locally (5 minutes)
 
@@ -70,6 +71,10 @@ Fill in the `SMTP_*` values in `.env` (Gmail app password, Zoho, Brevo, Resend S
 - **VPS (Ubuntu + nginx)** — `npm ci && npm run build`, run with `pm2 start server.js --name portfolio -- --production`, reverse-proxy port 3000 through nginx with a Let's Encrypt certificate.
 - **Docker** — `docker compose up -d` (Dockerfile + docker-compose.yml included; `data/` and `public/uploads/` are mounted volumes).
 
+**Every deploy needs a build step** (`npm run build`) before `npm start` — `render.yaml` and the `Dockerfile` already do this.
+
+**Caching:** public assets are cached for 7 days. Next.js fingerprints its own files, and the admin pages add a content hash to their CSS/JS links (`src/utils/assetVersion.js`), so changes show up immediately after a deploy without hard refreshes.
+
 Shared cPanel hosting without Node.js support will not run this project.
 
 ## 6. Project structure
@@ -79,10 +84,14 @@ server.js                        Express app: security headers, sessions, static
                                  hands every other request to Next.js
 app/                             Next.js App Router: layout (fonts, theme), homepage, projects/[slug], not-found, globals.css
 components/
-  ui/                            shadcn-style primitives (hover-gradient-nav-bar, glass-card)
-  site/                          Page sections, nav, footer, portfolio grid, lightbox, enquiry form
+  ui/                            shadcn-style primitives: action-button, floating-field, glass-card, dialog, carousel,
+                                 hover-gradient-nav-bar, silk-background-animation, sonar-grid, bokeh-background
+  site/                          Page sections (home-sections), site-nav, site-footer, site-sonar, booking-provider,
+                                 enquiry-form, featured-reel, portfolio-carousel, project-gallery (lightbox),
+                                 viewfinder-corners, motion (reveal, SmartImage, curtain, counters)
   icons/sprite.tsx               Inline SVG icon set (ids used by the CMS)
   theme-provider.tsx, theme-toggle.tsx
+hooks/use-reduced-motion.ts      Hydration-safe prefers-reduced-motion hook
 lib/                             data.ts (reads src/models), utils.ts (cn), site.ts (nav links), text.tsx
 src/
   config/
@@ -103,16 +112,19 @@ src/
     emailService.js               Enquiry email notification
   utils/
     slugify.js, text.js, logger.js
+    assetVersion.js              Adds ?v=<content hash> to admin CSS/JS links (cache-busting)
   routes/
     public.js                    GET /sitemap.xml, public JSON, POST /api/enquiries
     admin.js                     /api/admin/*  (projects, categories, services, enquiries, settings, auth)
   constants.js                   Icons, socials, enquiry statuses (categories now live in the database)
 public/
-  admin/                         Dashboard (login.html, index.html, admin.css, admin.js)
+  admin/                         Dashboard (login.html, index.html, admin.css, admin.js,
+                                 theme.js = shared light/dark, effects.js = silk/sonar/bokeh ports)
   uploads/                       Uploaded photos (gallery/, site/)
 scripts/
   change-password.js             npm run change-password
   reset-db.js                    npm run reset-db   (wipes DB + uploads, re-seeds placeholders)
+  check-grid.js                  npm run check:grid (8-point grid check; --fix snaps values)
 data/site.db                     SQLite database (created on first run)
 ```
 
@@ -135,3 +147,18 @@ Admin (session required)
 ## 8. Backups
 
 Copy `data/site.db` and the `public/uploads/` folder. That is the entire site state.
+
+## 9. Design system
+
+- **Themes** — tokens live in `app/globals.css`: a whitish-gradient light theme (default) and a dark theme (`.dark`, via next-themes). The admin reads the same `localStorage` key (`theme`), so the choice follows you between site and dashboard.
+- **Site-wide layers** (`app/layout.tsx`) — `SilkBackground` (fixed animated silk) and `SiteSonar` (one fixed sonar dot field for every page). The crosshair cursor and tap-to-ping only apply over empty background; see `isEmptySpace` in `components/site/site-sonar.tsx`.
+- **Booking popup** — any element with `data-book` opens it (`data-book="Wedding photography"` pre-selects that service). Links keep a real `#contact` href as the no-JavaScript fallback; `/#book` opens it directly.
+- **Signature details** — autofocus brackets + shutter flash on buttons (`ActionButton`), floating labels with viewfinder focus (`FloatingField`), bokeh that racks into focus behind forms, a "rack focus" featured reel, and an endless portfolio strip whose cards "develop in" when filtered.
+- **Reduced motion** — every effect has a calm fallback. When reduced motion changes what is *rendered*, use `useReducedMotionPreference` from `hooks/use-reduced-motion.ts` (not framer-motion's `useReducedMotion`) to avoid hydration mismatches.
+- **Admin parity** — `public/admin/effects.js` is a vanilla port of the silk, sonar and bokeh components; keep its palettes in sync when changing the React versions.
+
+## 10. Front-end conventions
+
+- **8-point grid** — spacing, sizing and radii are multiples of 8px, with 4px half-steps allowed below 24px. Exempt: typography, ≤ 2px borders, blur/shadow, breakpoints, ≤ 4px motion nudges. `npm run check:grid` lists violations (non-zero exit); `node scripts/check-grid.js --fix` snaps them.
+- **Before pushing** — `npm run typecheck`, `npm run check:grid`, `npm run build`.
+- **Adding shadcn components** — `npx shadcn@latest add <name>`, then check the generated file: the CLI currently writes `import { cn } from "cn"` and installs an unrelated `cn` npm package, and may add a `components/ui/button.tsx` that needs `class-variance-authority`. Change the import to `@/lib/utils`, run `npm uninstall cn`, and use `ActionButton` instead of the generated Button.
