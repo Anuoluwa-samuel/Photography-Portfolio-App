@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 // --- Silk background (adapted from 21st.dev) ---
 // Fixed, full-page animated silk that follows the `dark` class (shadcn / next-themes convention):
-// whitish-teal silk in light mode, dark silk in dark mode. Rendered at a fraction of screen
+// whitish-gold silk in light mode, dark silk in dark mode. Rendered at a fraction of screen
 // resolution and scaled up by CSS (the pattern is soft, so it looks identical at a far lower cost).
 
 type RGB = [number, number, number];
@@ -18,10 +18,10 @@ interface Palette {
   overlay: (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
 }
 
-const tealGlow = (ctx: CanvasRenderingContext2D, w: number, h: number, alpha: number) => {
+const goldGlow = (ctx: CanvasRenderingContext2D, w: number, h: number, alpha: number) => {
   const g = ctx.createRadialGradient(w * 0.88, -h * 0.08, 0, w * 0.88, -h * 0.08, Math.max(w, h) * 0.8);
-  g.addColorStop(0, `rgba(31, 209, 193, ${alpha})`);
-  g.addColorStop(1, 'rgba(31, 209, 193, 0)');
+  g.addColorStop(0, `rgba(245, 184, 46, ${alpha})`);
+  g.addColorStop(1, 'rgba(245, 184, 46, 0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 };
@@ -30,7 +30,7 @@ const PALETTES: Record<'light' | 'dark', Palette> = {
   light: {
     lo: [212, 228, 230],
     hi: [255, 255, 255],
-    overlay: (ctx, w, h) => tealGlow(ctx, w, h, 0.14),
+    overlay: (ctx, w, h) => goldGlow(ctx, w, h, 0.14),
   },
   dark: {
     lo: [0, 0, 0],
@@ -42,7 +42,7 @@ const PALETTES: Record<'light' | 'dark', Palette> = {
       v.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
       ctx.fillStyle = v;
       ctx.fillRect(0, 0, w, h);
-      tealGlow(ctx, w, h, 0.08);
+      goldGlow(ctx, w, h, 0.08);
     },
   },
 };

@@ -263,7 +263,7 @@ const views = {
     title.textContent = 'Site content';
     const { settings: s } = await api('/settings');
     const stats = JSON.parse(s.stats || '[]'), points = JSON.parse(s.about_points || '[]');
-    const accentHint = 'Wrap the word you want in teal with double brackets, e.g. <code>Light that [[remembers]] the moment</code>.';
+    const accentHint = 'Wrap the word you want in gold with double brackets, e.g. <code>Light that [[remembers]] the moment</code>. Separate words with | to cycle them with a typing effect: <code>[[remembers|captures|holds]]</code>.';
     view.innerHTML = `
       <form id="settingsForm">
         <fieldset><legend>Brand</legend>

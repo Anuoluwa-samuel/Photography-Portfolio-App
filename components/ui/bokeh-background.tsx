@@ -43,7 +43,7 @@ const TAU = Math.PI * 2
 
 const parseRgb = (css: string): [number, number, number] => {
   const m = css.match(/[\d.]+/g)
-  return m && m.length >= 3 ? [Number(m[0]), Number(m[1]), Number(m[2])] : [31, 209, 193]
+  return m && m.length >= 3 ? [Number(m[0]), Number(m[1]), Number(m[2])] : [245, 184, 46]
 }
 
 /**
@@ -88,7 +88,7 @@ export function BokehBackground({
     let last = 0
     let visible = true
     let highlights: Highlight[] = []
-    let primary: [number, number, number] = [31, 209, 193]
+    let primary: [number, number, number] = [245, 184, 46]
     let dark = false
     let currentFocus = opts.current.focus
     const pointer = { x: 0, y: 0, tx: 0, ty: 0 }

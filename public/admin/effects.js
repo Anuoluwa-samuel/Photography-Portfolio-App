@@ -26,10 +26,10 @@
       var G = 2.71828;
       return (G * Math.sin(G * x) * G * Math.sin(G * y) * (1 + x)) % 1;
     }
-    function tealGlow(w, h, alpha) {
+    function goldGlow(w, h, alpha) {
       var g = ctx.createRadialGradient(w * 0.88, -h * 0.08, 0, w * 0.88, -h * 0.08, Math.max(w, h) * 0.8);
-      g.addColorStop(0, 'rgba(31, 209, 193, ' + alpha + ')');
-      g.addColorStop(1, 'rgba(31, 209, 193, 0)');
+      g.addColorStop(0, 'rgba(245, 184, 46, ' + alpha + ')');
+      g.addColorStop(1, 'rgba(245, 184, 46, 0)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
     }
@@ -57,9 +57,9 @@
         vg.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
         ctx.fillStyle = vg;
         ctx.fillRect(0, 0, w, h);
-        tealGlow(w, h, 0.08);
+        goldGlow(w, h, 0.08);
       } else {
-        tealGlow(w, h, 0.14);
+        goldGlow(w, h, 0.14);
       }
     }
     function resize() {
@@ -93,7 +93,7 @@
     if (!ctx) return;
 
     var W = 0, H = 0, items = [], raf = 0, last = 0, visible = true;
-    var primary = [31, 209, 193], pointer = { x: 0, y: 0, tx: 0, ty: 0 };
+    var primary = [245, 184, 46], pointer = { x: 0, y: 0, tx: 0, ty: 0 };
 
     function readColor() {
       var m = getComputedStyle(canvas).color.match(/[\d.]+/g);

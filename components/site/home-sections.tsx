@@ -171,7 +171,7 @@ export function Services({ s, services, letter }: { s: Settings; services: Servi
                 as="article"
                 className="group/svc flex h-full flex-col gap-4 px-[32px] pb-[32px] pt-10 transition-[transform,border-color,box-shadow] duration-500 ease-[var(--ease)] hover:-translate-y-2 hover:border-brand/40 hover:shadow-[0_34px_60px_-34px_var(--brand-glow)]"
               >
-                <div aria-hidden="true" className="!absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(31,209,193,.16),transparent_55%)] opacity-0 transition-opacity duration-500 group-hover/svc:opacity-100" />
+                <div aria-hidden="true" className="!absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(245,184,46,.16),transparent_55%)] opacity-0 transition-opacity duration-500 group-hover/svc:opacity-100" />
                 <Icon name={sv.icon} className="size-[48px] stroke-[1.3] text-brand" />
                 <h3 className="mt-1 text-[1.3rem] leading-[1.2]">{sv.name}</h3>
                 {sv.price && <p className="font-display text-[.72rem] uppercase tracking-[.18em] text-brand">{sv.price}</p>}
