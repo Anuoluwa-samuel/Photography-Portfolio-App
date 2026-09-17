@@ -1,6 +1,6 @@
 # YIT0 SHOT IT — Photography Portfolio + Admin CMS
 
-A premium teal photography portfolio (whitish-gradient light theme + dark mode) built around **Projects**: each project is a titled, categorized collection of photos with its own page at `/projects/:slug`. Everything — projects, categories, services, homepage copy, enquiries — is managed from a built-in admin CMS. The whole app runs from one Node.js process with a single SQLite file, so there is no separate database server to install.
+A premium gold photography portfolio (whitish-gradient light theme + dark mode) built around **Projects**: each project is a titled, categorized collection of photos with its own page at `/projects/:slug`. Everything — projects, categories, services, homepage copy, enquiries — is managed from a built-in admin CMS. The whole app runs from one Node.js process with a single SQLite file, so there is no separate database server to install.
 
 | Layer | Choice | Why |
 |---|---|---|
@@ -51,7 +51,7 @@ Default login (from `.env`): username `admin`, password `ChangeMe123!` — chang
 
 All changes are live immediately — the homepage and every project page are rendered from the database on every request. A project only appears on the public site once it's **published**; drafts stay admin-only.
 
-**Accent word:** in any heading, wrap the word you want in teal with double brackets: `Light that [[remembers]] the moment`.
+**Accent word:** in any heading, wrap the word you want in gold with double brackets: `Light that [[remembers]] the moment`.
 
 ## 3. Replacing the placeholder photos
 

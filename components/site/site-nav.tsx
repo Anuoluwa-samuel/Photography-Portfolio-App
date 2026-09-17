@@ -6,36 +6,36 @@ import HoverGradientNavBar, { type HoverGradientMenuItem } from '@/components/ui
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NAV_LINKS, type NavId } from '@/lib/site';
 
-const TEAL_GLOW = 'radial-gradient(circle, rgba(31,209,193,0.18) 0%, rgba(13,138,128,0.07) 50%, rgba(13,138,128,0) 100%)';
+const GOLD_GLOW = 'radial-gradient(circle, rgba(245,184,46,0.18) 0%, rgba(154,106,0,0.07) 50%, rgba(154,106,0,0) 100%)';
 
 const STYLES: Record<NavId, Omit<HoverGradientMenuItem, 'id' | 'label' | 'href'>> = {
   hero: {
     icon: <House className="h-4 w-4" />,
-    gradient: TEAL_GLOW,
+    gradient: GOLD_GLOW,
     iconColor: 'group-hover:text-brand',
     activeIconColor: 'text-brand',
   },
   about: {
     icon: <UserRound className="h-4 w-4" />,
-    gradient: TEAL_GLOW,
+    gradient: GOLD_GLOW,
     iconColor: 'group-hover:text-brand',
     activeIconColor: 'text-brand',
   },
   portfolio: {
     icon: <Images className="h-4 w-4" />,
-    gradient: TEAL_GLOW,
+    gradient: GOLD_GLOW,
     iconColor: 'group-hover:text-brand',
     activeIconColor: 'text-brand',
   },
   services: {
     icon: <BriefcaseBusiness className="h-4 w-4" />,
-    gradient: TEAL_GLOW,
+    gradient: GOLD_GLOW,
     iconColor: 'group-hover:text-brand',
     activeIconColor: 'text-brand',
   },
   contact: {
     icon: <CalendarCheck className="h-4 w-4" />,
-    gradient: 'radial-gradient(circle, rgba(31,209,193,0.35) 0%, rgba(31,209,193,0.12) 50%, rgba(31,209,193,0) 100%)',
+    gradient: 'radial-gradient(circle, rgba(245,184,46,0.35) 0%, rgba(245,184,46,0.12) 50%, rgba(245,184,46,0) 100%)',
     iconColor: '',
     cta: true,
   },
