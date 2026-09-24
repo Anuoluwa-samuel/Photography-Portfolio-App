@@ -84,7 +84,7 @@ export function PortfolioCarousel({ projects, categories }: { projects: GridProj
             type="button"
             aria-pressed={filter === c.slug}
             onClick={() => setFilter(c.slug)}
-            className="glass rounded-full px-4 py-2 font-display text-[.7rem] uppercase tracking-[.18em] text-muted-foreground transition-[background-color,color,border-color,transform] duration-300 hover:border-brand/50 hover:text-foreground active:scale-[.96] aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-brand-foreground"
+            className="glass rounded-full px-4 py-3 font-display text-[.7rem] uppercase tracking-[.18em] text-muted-foreground transition-[background-color,color,border-color,transform] duration-300 lg:py-2 hover:border-brand/50 hover:text-foreground active:scale-[.96] aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-brand-foreground"
           >
             {c.label}
           </button>

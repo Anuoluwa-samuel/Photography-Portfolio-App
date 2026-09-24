@@ -13,7 +13,7 @@ export function SocialLinks({ socials, className }: { socials: Social[]; classNa
           target="_blank"
           rel="noopener"
           aria-label={x.key}
-          className="grid size-[40px] place-items-center rounded-full border border-border text-muted-foreground transition-[border-color,color,transform,box-shadow] duration-300 hover:-translate-y-[3px] hover:border-brand hover:text-brand hover:shadow-[0_10px_22px_-10px_var(--brand-glow)]"
+          className="grid size-11 place-items-center rounded-full border border-border text-muted-foreground transition-[border-color,color,transform,box-shadow] duration-300 lg:size-[40px] hover:-translate-y-[3px] hover:border-brand hover:text-brand hover:shadow-[0_10px_22px_-10px_var(--brand-glow)]"
         >
           <Icon name={x.key} className="size-[16px] stroke-[1.6]" />
         </a>

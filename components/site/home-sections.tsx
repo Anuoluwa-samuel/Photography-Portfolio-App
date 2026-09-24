@@ -25,7 +25,7 @@ function SectionHead({ eyebrow, title, titleId, intro }: { eyebrow: string; titl
 /* ================= HERO ================= */
 export function Hero({ s, socials, letter }: { s: Settings; socials: Social[]; letter: string }) {
   return (
-    <section id="hero" aria-labelledby="hero-title" className="section grid min-h-screen items-center overflow-hidden !pb-20 !pt-[calc(var(--nav-h)+64px)] max-[900px]:min-h-0 max-[900px]:!pb-[64px]">
+    <section id="hero" aria-labelledby="hero-title" className="section grid min-h-screen items-center overflow-hidden !pb-20 !pt-[calc(var(--nav-h)+64px)] portrait:min-h-0 max-[900px]:min-h-0 max-[900px]:!pb-[64px]">
       <div className="wm" aria-hidden="true">{letter}</div>
       <div className="site-container grid grid-cols-[1.05fr_.95fr] items-center gap-[64px] max-[900px]:grid-cols-1 max-[900px]:gap-12">
         <div>

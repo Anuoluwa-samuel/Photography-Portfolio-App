@@ -183,7 +183,7 @@ function HoverGradientNavBar({ items, activeId, brand, actions, className }: Hov
             {actions}
             <button
               type="button"
-              className="glass relative grid size-10 place-items-center rounded-full lg:hidden"
+              className="glass relative grid size-11 place-items-center rounded-full lg:hidden"
               aria-expanded={open}
               aria-controls="mobile-nav"
               aria-label={open ? 'Close menu' : 'Open menu'}

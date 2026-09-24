@@ -15,7 +15,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label="Toggle dark mode"
       title="Toggle dark mode"
       className={cn(
-        'glass relative grid size-10 shrink-0 place-items-center rounded-full text-foreground',
+        'glass relative grid size-11 shrink-0 place-items-center rounded-full text-foreground lg:size-10',
         'transition-transform duration-300 hover:scale-105 active:scale-95',
         className,
       )}

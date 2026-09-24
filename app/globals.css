@@ -163,7 +163,7 @@
 ================================================================== */
 @layer components {
   .site-container { width: min(var(--max), 100% - 2 * var(--gutter)); margin-inline: auto; position: relative; z-index: 1; }
-  .section { position: relative; padding-block: clamp(80px, 10vw, 144px); }
+  .section { position: relative; padding-block: clamp(32px, 10vw, 144px); }
   .skip { position: absolute; left: -999px; top: 12px; z-index: 1000; background: var(--brand); color: var(--brand-foreground); padding: 8px 16px; border-radius: 8px; font-weight: 600; }
   .skip:focus { left: 12px; }
 
