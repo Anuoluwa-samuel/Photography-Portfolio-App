@@ -4,6 +4,13 @@
 // the bundler compiling a second copy of the database layer.
 import { createRequire } from 'node:module';
 import path from 'node:path';
+// A real, statically-analysable import of the database driver. The models below are pulled in
+// through createRequire, which Next's file tracer cannot follow into node_modules — so without
+// this the page functions deploy without @libsql/client and every page 500s on MODULE_NOT_FOUND.
+// @libsql/client is listed in serverExternalPackages, so this is emitted as a require of an
+// external package and Next traces the whole dependency closure (js-base64, ws, libsql, …) itself
+// rather than us enumerating it by hand in next.config.ts.
+import '@libsql/client';
 
 export type Settings = Record<string, string>;
 
