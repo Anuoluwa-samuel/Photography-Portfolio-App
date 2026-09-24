@@ -15,10 +15,14 @@ module.exports = {
   SITE_NAME: 'YIT0 SHOT IT',
   SESSION_SECRET: process.env.SESSION_SECRET || 'dev-only-secret',
   SITE_URL: process.env.SITE_URL || '',
-  DATA_DIR: path.resolve(process.env.DATA_DIR || './data'),
-  UPLOAD_DIR: path.resolve(process.env.UPLOAD_DIR || './public/uploads'),
+  // These are runtime-only paths (local disk / a mounted volume). The turbopackIgnore comments stop
+  // Next's file tracer from seeing a dynamic path.resolve and, to be safe, pulling the entire project
+  // — public/ included — into the serverless bundle. public/admin is traced in explicitly via
+  // outputFileTracingIncludes in next.config.ts instead.
+  DATA_DIR: path.resolve(/* turbopackIgnore: true */ process.env.DATA_DIR || './data'),
+  UPLOAD_DIR: path.resolve(/* turbopackIgnore: true */ process.env.UPLOAD_DIR || './public/uploads'),
   // libSQL: a local file in dev, a Turso URL (libsql://…) in production.
-  DB_URL: process.env.TURSO_DATABASE_URL || `file:${path.resolve(process.env.DATA_DIR || './data', 'site.db')}`,
+  DB_URL: process.env.TURSO_DATABASE_URL || `file:${path.resolve(/* turbopackIgnore: true */ process.env.DATA_DIR || './data', 'site.db')}`,
   DB_AUTH_TOKEN: process.env.TURSO_AUTH_TOKEN || undefined,
   // Vercel Blob replaces the local uploads disk once BLOB_READ_WRITE_TOKEN is set.
   BLOB_TOKEN: process.env.BLOB_READ_WRITE_TOKEN || '',
