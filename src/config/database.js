@@ -396,4 +396,6 @@ async function init() {
   return { url: env.DB_URL };
 }
 
-module.exports = { db, init, client, DEFAULT_SETTINGS, DEFAULT_CATEGORIES };
+// SCHEMA_SQL is exported so the migration script can create tables on a fresh target database
+// without also seeding it — the rows come from the source database instead.
+module.exports = { db, init, client, SCHEMA_SQL, DEFAULT_SETTINGS, DEFAULT_CATEGORIES };
