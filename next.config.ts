@@ -12,8 +12,11 @@ const { nextHeaders } = require_('./src/config/securityHeaders') as {
 const EXPRESS_PATHS = ['/admin', '/admin/:path*', '/robots.txt', '/sitemap.xml', '/healthz'];
 
 const nextConfig: NextConfig = {
-  // sharp ships prebuilt native binaries — never bundle it.
-  serverExternalPackages: ['sharp'],
+  // Both ship native binaries (.node), which cannot be bundled into a server chunk. The App Router
+  // bundles node_modules by default, so without this the pages 500 at runtime while the Pages-Router
+  // API route — which traces its dependencies instead — keeps working. That asymmetry is exactly how
+  // this first showed up on Vercel: /api/* served fine and / did not.
+  serverExternalPackages: ['sharp', '@libsql/client'],
   poweredByHeader: false,
   reactStrictMode: true,
 
@@ -26,6 +29,12 @@ const nextConfig: NextConfig = {
   // so trace these files in explicitly or versionedHtml() throws ENOENT on every /admin request.
   outputFileTracingIncludes: {
     '/api/[[...path]]': ['./public/admin/**'],
+    // lib/data.ts reaches the CommonJS models through createRequire at runtime, so the tracer
+    // follows src/** but never sees the require('@libsql/client') inside src/config/database.js.
+    // Without these the page functions deploy without the driver and 500 with MODULE_NOT_FOUND,
+    // while /api/* — traced normally through pages/api — keeps working.
+    '/': ['./node_modules/@libsql/**', './node_modules/libsql/**'],
+    '/projects/[slug]': ['./node_modules/@libsql/**', './node_modules/libsql/**'],
   },
 
   // Express/helmet only sees /api/* and the rewritten routes. On Vercel the pages below are rendered
