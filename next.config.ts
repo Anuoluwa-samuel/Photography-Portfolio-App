@@ -1,4 +1,6 @@
 import type { NextConfig } from 'next';
+import fs from 'node:fs';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 
 // Shared with the Express app (src/app.js) so the two header sets cannot drift.
@@ -9,18 +11,37 @@ const { nextHeaders } = require_('./src/config/securityHeaders') as {
 
 // Non-/api paths that the Express app owns. Next rewrites them onto the catch-all API route, which
 // strips the prefix and restores the original path before handing the request to Express.
-// Runtime dependency closure of @libsql/client, computed from its package.json tree. Types-only
-// packages (@types/*, undici-types) are left out. ./node_modules/@libsql/** also covers the
-// per-platform native builds, so Vercel's linux-x64 binary is picked up without naming it.
-const LIBSQL_RUNTIME = [
-  './node_modules/@libsql/**',
-  './node_modules/libsql/**',
-  './node_modules/js-base64/**',
-  './node_modules/promise-limit/**',
-  './node_modules/@neon-rs/**',
-  './node_modules/detect-libc/**',
-  './node_modules/ws/**',
+// Everything under src/ is reached from the page components through createRequire (see lib/data.ts),
+// which Next's file tracer cannot follow into node_modules. It traces the src/*.js files themselves
+// but none of their packages, so the page functions deploy without them and 500 at runtime —
+// first on @libsql/client, then js-base64, then bcryptjs, one redeploy at a time.
+//
+// Rather than hand-listing packages and rediscovering the next omission on the next deploy, walk
+// the dependency tree at build time from the handful src/ requires directly. Transitive changes
+// are picked up automatically; only a brand-new direct import needs adding to SRC_EXTERNALS.
+const SRC_EXTERNALS = [
+  '@libsql/client', '@vercel/blob', 'bcryptjs', 'cookie-session',
+  'express', 'express-rate-limit', 'helmet', 'multer', 'nodemailer', 'sharp',
 ];
+
+function runtimeClosure(roots: string[]): string[] {
+  const seen = new Set<string>();
+  const found = new Set<string>();
+  const visit = (name: string) => {
+    if (seen.has(name)) return;
+    seen.add(name);
+    const manifest = path.join(process.cwd(), 'node_modules', name, 'package.json');
+    if (!fs.existsSync(manifest)) return;           // optional per-platform builds, absent here
+    found.add(name);
+    const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+    Object.keys(pkg.dependencies ?? {}).forEach(visit);
+    Object.keys(pkg.optionalDependencies ?? {}).forEach(visit);
+  };
+  roots.forEach(visit);
+  return [...found].sort().map(name => `./node_modules/${name}/**`);
+}
+
+const SRC_RUNTIME = runtimeClosure(SRC_EXTERNALS);
 
 const EXPRESS_PATHS = ['/admin', '/admin/:path*', '/robots.txt', '/sitemap.xml', '/healthz'];
 
@@ -50,8 +71,8 @@ const nextConfig: NextConfig = {
     // detect-libc and @neon-rs/load are siblings at the top level of node_modules, and a glob
     // over @libsql/** silently misses them. The first attempt did exactly that and the pages
     // still 500'd, on "Cannot find module 'js-base64'".
-    '/': [...LIBSQL_RUNTIME],
-    '/projects/[slug]': [...LIBSQL_RUNTIME],
+    '/': SRC_RUNTIME,
+    '/projects/[slug]': SRC_RUNTIME,
   },
 
   // Express/helmet only sees /api/* and the rewritten routes. On Vercel the pages below are rendered
