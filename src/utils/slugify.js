@@ -8,12 +8,12 @@ function slugify(str) {
     .slice(0, 80) || 'project';
 }
 
-/** Appends -2, -3, ... until `exists(candidate)` returns false. */
-function uniqueSlug(base, exists) {
+/** Appends -2, -3, ... until `exists(candidate)` resolves false. `exists` may be async. */
+async function uniqueSlug(base, exists) {
   const root = slugify(base);
-  if (!exists(root)) return root;
+  if (!(await exists(root))) return root;
   let i = 2;
-  while (exists(`${root}-${i}`)) i++;
+  while (await exists(`${root}-${i}`)) i++;
   return `${root}-${i}`;
 }
 

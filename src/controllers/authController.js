@@ -7,12 +7,12 @@ function me(req, res) {
   res.json({ username: req.session.username });
 }
 
-function changePassword(req, res) {
+async function changePassword(req, res) {
   const { current = '', next = '' } = req.body || {};
-  const user = User.byUsername(req.session.username);
+  const user = await User.byUsername(req.session.username);
   if (!bcrypt.compareSync(String(current), user.password_hash)) return res.status(400).json({ success: false, message: 'Current password is wrong.', error: 'WRONG_PASSWORD' });
   if (String(next).length < 8) return res.status(400).json({ success: false, message: 'New password must be at least 8 characters.', error: 'VALIDATION_ERROR' });
-  User.setPassword(user.id, String(next));
+  await User.setPassword(user.id, String(next));
   res.json({ ok: true });
 }
 

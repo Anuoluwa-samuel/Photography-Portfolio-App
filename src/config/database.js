@@ -1,23 +1,69 @@
-// Database connection, schema, and the one-time migration from the old flat
+// Database connection, schema, seed data and the one-time migration from the old flat
 // `gallery` table to the Project -> Images model.
-const fs = require('fs');
-const path = require('path');
-const Database = require('better-sqlite3');
+//
+// Driver is libSQL: a local file in development, Turso over the network in production. The SQL
+// dialect is SQLite either way, so the queries in src/models are unchanged.
+//
+// Schema and seeding deliberately do NOT run on import. Serverless instances cold-start
+// concurrently, and request-time seeding races: every instance sees an empty table and inserts.
+// Run `npm run db:init` once per environment instead — at runtime the app only connects.
+const { createClient } = require('@libsql/client');
 const bcrypt = require('bcryptjs');
 const env = require('./environment');
 const logger = require('../utils/logger')('db');
 const { slugify } = require('../utils/slugify');
 
-fs.mkdirSync(env.DATA_DIR, { recursive: true });
-
-const db = new Database(path.join(env.DATA_DIR, 'site.db'));
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const client = createClient({
+  url: env.DB_URL,
+  ...(env.DB_AUTH_TOKEN ? { authToken: env.DB_AUTH_TOKEN } : {}),
+  intMode: 'number',   // INTEGER columns arrive as JS numbers, as better-sqlite3 returned them
+});
+// No `PRAGMA foreign_keys = ON` here (better-sqlite3 needed it): libSQL enables foreign keys by
+// default, so ON DELETE CASCADE / SET NULL are enforced. Verified against both a file: URL and Turso.
 
 /* ------------------------------------------------------------------ */
-/* Schema                                                              */
+/* better-sqlite3-shaped shim over the async libSQL client             */
+/* The models keep calling prepare().all/get/run — they just await now.*/
 /* ------------------------------------------------------------------ */
-db.exec(`
+
+// better-sqlite3 accepts either positional args (.get(1)) or a single named-parameter object
+// (.run({ title, slug })). libSQL matches @name/:name/$name against plain object keys, so the
+// SQL itself needs no rewriting.
+const bindArgs = (args) => (
+  args.length === 1 && args[0] !== null && typeof args[0] === 'object' && !Array.isArray(args[0])
+    ? args[0]
+    : args
+);
+
+// Rebuild each Row as a plain object so spreads, Object.keys and JSON.stringify behave.
+const toPlain = (res) => res.rows.map((row) => {
+  const out = {};
+  for (const col of res.columns) out[col] = row[col];
+  return out;
+});
+
+// lastInsertRowid comes back as a BigInt; JSON.stringify throws on those, and callers use it as an id.
+const toNumber = (v) => (typeof v === 'bigint' ? Number(v) : v);
+
+const db = {
+  prepare(sql) {
+    return {
+      async all(...args) { return toPlain(await client.execute({ sql, args: bindArgs(args) })); },
+      async get(...args) { return toPlain(await client.execute({ sql, args: bindArgs(args) }))[0]; },
+      async run(...args) {
+        const res = await client.execute({ sql, args: bindArgs(args) });
+        return { changes: toNumber(res.rowsAffected), lastInsertRowid: toNumber(res.lastInsertRowid) };
+      },
+    };
+  },
+  // Multi-statement DDL (the schema block below).
+  async exec(sql) { await client.executeMultiple(sql); },
+  // Atomic group of independent statements. Dependent inserts (needing lastInsertRowid) stay sequential.
+  async batch(statements) { if (statements.length) await client.batch(statements, 'write'); },
+  client,
+};
+
+const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
@@ -93,7 +139,7 @@ CREATE TABLE IF NOT EXISTS enquiries (
   ip TEXT NOT NULL DEFAULT '',
   created_at TEXT DEFAULT (datetime('now'))
 );
-`);
+`;
 
 /* ------------------------------------------------------------------ */
 /* Seed data (first run only)                                          */
@@ -211,74 +257,83 @@ const SEED_SERVICES = [
   ['Editing & retouching',  'wand',     'From ₦5,000 / image',  "Colour grading and high-end retouching for images you've already shot. Natural results, no plastic skin.",     ['Colour + exposure correction', 'Skin and background cleanup', '2 revision rounds', '72-hour turnaround'], 'Send your files'],
 ];
 
-function seedSettings() {
-  if (db.prepare('SELECT COUNT(*) AS n FROM settings').get().n === 0) {
-    const ins = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
-    db.transaction(() => { for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) ins.run(k, v); })();
-  }
+/* ------------------------------------------------------------------ */
+/* Seeds (first run only)                                              */
+/* ------------------------------------------------------------------ */
+const isEmpty = async (table) => (await db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()).n === 0;
+
+async function seedSettings() {
+  if (!(await isEmpty('settings'))) return;
+  await db.batch(Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({
+    sql: 'INSERT INTO settings (key, value) VALUES (?, ?)', args: [key, value],
+  })));
 }
-function seedCategories() {
-  if (db.prepare('SELECT COUNT(*) AS n FROM categories').get().n === 0) {
-    const ins = db.prepare('INSERT INTO categories (slug, label, active, sort) VALUES (?, ?, 1, ?)');
-    db.transaction(() => { DEFAULT_CATEGORIES.forEach((c, i) => ins.run(c.slug, c.label, i)); })();
-  }
+
+async function seedCategories() {
+  if (!(await isEmpty('categories'))) return;
+  await db.batch(DEFAULT_CATEGORIES.map((c, i) => ({
+    sql: 'INSERT INTO categories (slug, label, active, sort) VALUES (?, ?, 1, ?)', args: [c.slug, c.label, i],
+  })));
 }
+
 // Placeholder demo content — only used on a genuinely fresh install (no projects AND no legacy
 // `gallery` table to migrate from). Must run AFTER migrateLegacyGallery(), never before it,
 // or real uploaded photos in an existing `gallery` table would be orphaned into the backup table.
-function seedProjectsFallback() {
-  if (db.prepare('SELECT COUNT(*) AS n FROM projects').get().n > 0) return;
-  const catBySlug = Object.fromEntries(db.prepare('SELECT id, slug FROM categories').all().map(c => [c.slug, c.id]));
+async function seedProjectsFallback() {
+  if (!(await isEmpty('projects'))) return;
+  const cats = await db.prepare('SELECT id, slug FROM categories').all();
+  const catBySlug = Object.fromEntries(cats.map((c) => [c.slug, c.id]));
   const insProject = db.prepare(`INSERT INTO projects (title, slug, description, category_id, cover_image, featured, published, sort)
                                   VALUES (@title, @slug, '', @category_id, @cover_image, @featured, 1, @sort)`);
   const insImage = db.prepare(`INSERT INTO images (project_id, src_full, src_thumb, width, height, caption, alt, sort)
                                 VALUES (@project_id, @src_full, @src_thumb, @width, @height, @caption, @alt, @sort)`);
-  db.transaction(() => {
-    DEFAULT_CATEGORIES.forEach((cat, ci) => {
-      const photos = SEED_GALLERY.filter(([c]) => c === cat.slug);
-      if (!photos.length) return;
-      const cover = photos.find(p => p[6]) || photos[0];
-      const projectId = insProject.run({
-        title: `${cat.label} collection`, slug: cat.slug,
-        category_id: catBySlug[cat.slug], cover_image: U(cover[3], cover[4], cover[5]),
-        featured: photos.some(p => p[6]) ? 1 : 0, sort: ci,
-      }).lastInsertRowid;
-      photos.forEach(([, title, alt, img, w, h], i) => insImage.run({
-        project_id: projectId, src_full: UL(img), src_thumb: U(img, w, h), width: w, height: h, caption: title, alt, sort: i,
-      }));
+  for (const [ci, cat] of DEFAULT_CATEGORIES.entries()) {
+    const photos = SEED_GALLERY.filter(([c]) => c === cat.slug);
+    if (!photos.length) continue;
+    const cover = photos.find((p) => p[6]) || photos[0];
+    // Sequential: each image insert needs the project id this returns.
+    const { lastInsertRowid: projectId } = await insProject.run({
+      title: `${cat.label} collection`, slug: cat.slug,
+      category_id: catBySlug[cat.slug], cover_image: U(cover[3], cover[4], cover[5]),
+      featured: photos.some((p) => p[6]) ? 1 : 0, sort: ci,
     });
-  })();
-}
-function seedServices() {
-  if (db.prepare('SELECT COUNT(*) AS n FROM services').get().n === 0) {
-    const ins = db.prepare('INSERT INTO services (name, icon, price, description, includes, cta, sort) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    db.transaction(() => {
-      SEED_SERVICES.forEach(([name, icon, price, desc, inc, cta], i) => ins.run(name, icon, price, desc, JSON.stringify(inc), cta, i));
-    })();
+    for (const [i, [, title, alt, img, w, h]] of photos.entries()) {
+      await insImage.run({
+        project_id: projectId, src_full: UL(img), src_thumb: U(img, w, h), width: w, height: h, caption: title, alt, sort: i,
+      });
+    }
   }
 }
-function seedUsers() {
-  if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n === 0) {
-    db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(env.ADMIN_USERNAME, bcrypt.hashSync(env.ADMIN_PASSWORD, 12));
-    logger.info(`Created admin user "${env.ADMIN_USERNAME}" (password from ADMIN_PASSWORD in .env)`);
-  }
+
+async function seedServices() {
+  if (!(await isEmpty('services'))) return;
+  await db.batch(SEED_SERVICES.map(([name, icon, price, desc, inc, cta], i) => ({
+    sql: 'INSERT INTO services (name, icon, price, description, includes, cta, sort) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    args: [name, icon, price, desc, JSON.stringify(inc), cta, i],
+  })));
 }
-seedSettings();
-seedCategories();
+
+async function seedUsers() {
+  if (!(await isEmpty('users'))) return;
+  await db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)')
+          .run(env.ADMIN_USERNAME, bcrypt.hashSync(env.ADMIN_PASSWORD, 12));
+  logger.info(`Created admin user "${env.ADMIN_USERNAME}" (password from ADMIN_PASSWORD)`);
+}
 
 /* ------------------------------------------------------------------ */
 /* One-time migration: legacy flat `gallery` table -> Project + Images */
 /* ------------------------------------------------------------------ */
-function migrateLegacyGallery() {
-  const hasGalleryTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='gallery'`).get();
+async function migrateLegacyGallery() {
+  const hasGalleryTable = await db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='gallery'`).get();
   if (!hasGalleryTable) return;
 
-  const legacyRows = db.prepare('SELECT * FROM gallery ORDER BY sort, id').all();
-  const projectCount = db.prepare('SELECT COUNT(*) AS n FROM projects').get().n;
+  const legacyRows = await db.prepare('SELECT * FROM gallery ORDER BY sort, id').all();
+  const projectCount = (await db.prepare('SELECT COUNT(*) AS n FROM projects').get()).n;
 
   // Only migrate if projects haven't already been seeded/created from this legacy data.
   if (legacyRows.length && projectCount === 0) {
-    const catBySlug = Object.fromEntries(db.prepare('SELECT id, slug, label FROM categories').all().map(c => [c.slug, c]));
+    const cats = await db.prepare('SELECT id, slug, label FROM categories').all();
+    const catBySlug = Object.fromEntries(cats.map((c) => [c.slug, c]));
     const byCategory = new Map();
     for (const row of legacyRows) {
       if (!byCategory.has(row.category)) byCategory.set(row.category, []);
@@ -288,46 +343,57 @@ function migrateLegacyGallery() {
                                     VALUES (@title, @slug, '', @category_id, @cover_image, @featured, 1, @sort)`);
     const insImage = db.prepare(`INSERT INTO images (project_id, src_full, src_thumb, width, height, caption, alt, sort)
                                   VALUES (@project_id, @src_full, @src_thumb, @width, @height, @caption, @alt, @sort)`);
-    db.transaction(() => {
-      let sort = 0;
-      for (const [catSlug, rows] of byCategory) {
-        const cat = catBySlug[catSlug];
-        const cover = rows.find(r => r.featured) || rows[0];
-        const projectId = insProject.run({
-          title: `${cat ? cat.label : catSlug} collection`,
-          slug: cat ? cat.slug : slugify(catSlug),
-          category_id: cat ? cat.id : null,
-          cover_image: cover.src_thumb,
-          featured: rows.some(r => r.featured) ? 1 : 0,
-          sort: sort++,
-        }).lastInsertRowid;
-        rows.forEach((r, i) => insImage.run({
+    let sort = 0;
+    for (const [catSlug, rows] of byCategory) {
+      const cat = catBySlug[catSlug];
+      const cover = rows.find((r) => r.featured) || rows[0];
+      const { lastInsertRowid: projectId } = await insProject.run({
+        title: `${cat ? cat.label : catSlug} collection`,
+        slug: cat ? cat.slug : slugify(catSlug),
+        category_id: cat ? cat.id : null,
+        cover_image: cover.src_thumb,
+        featured: rows.some((r) => r.featured) ? 1 : 0,
+        sort: sort++,
+      });
+      for (const [i, r] of rows.entries()) {
+        await insImage.run({
           project_id: projectId, src_full: r.src_full, src_thumb: r.src_thumb,
           width: r.width, height: r.height, caption: r.title, alt: r.alt, sort: i,
-        }));
+        });
       }
-    })();
+    }
     logger.info(`Migrated ${legacyRows.length} legacy gallery photo(s) into ${byCategory.size} project(s).`);
   }
 
-  db.exec('ALTER TABLE gallery RENAME TO gallery_legacy_backup');
+  await db.exec('ALTER TABLE gallery RENAME TO gallery_legacy_backup');
   logger.info('Renamed legacy gallery table to gallery_legacy_backup (kept, not deleted).');
 }
-migrateLegacyGallery();
-seedProjectsFallback(); // only fires if there was no legacy gallery table AND projects is still empty
-seedServices();
-seedUsers();
 
 /* One-time rebrand: only overwrite settings that still hold the old defaults, never a customized value. */
-function migrateBrandRename() {
+async function migrateBrandRename() {
   for (const [key, oldValue] of Object.entries(OLD_BRAND_DEFAULTS)) {
-    const current = db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value;
-    if (current === oldValue) {
-      db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(DEFAULT_SETTINGS[key], key);
+    const row = await db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+    if (row?.value === oldValue) {
+      await db.prepare('UPDATE settings SET value = ? WHERE key = ?').run(DEFAULT_SETTINGS[key], key);
       logger.info(`Renamed settings.${key}: "${oldValue}" -> "${DEFAULT_SETTINGS[key]}"`);
     }
   }
 }
-migrateBrandRename();
 
-module.exports = { db, DEFAULT_SETTINGS, DEFAULT_CATEGORIES };
+/**
+ * Create the schema, seed first-run data and apply the one-time migrations.
+ * Idempotent, but must not be run concurrently — call it from `npm run db:init`, not per request.
+ */
+async function init() {
+  await db.exec(SCHEMA_SQL);
+  await seedSettings();
+  await seedCategories();
+  await migrateLegacyGallery();
+  await seedProjectsFallback(); // only fires if there was no legacy gallery table AND projects is still empty
+  await seedServices();
+  await seedUsers();
+  await migrateBrandRename();
+  return { url: env.DB_URL };
+}
+
+module.exports = { db, init, client, DEFAULT_SETTINGS, DEFAULT_CATEGORIES };

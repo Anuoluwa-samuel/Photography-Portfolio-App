@@ -4,30 +4,32 @@ const { sendEnquiryNotification } = require('../services/emailService');
 const { ENQUIRY_STATUSES } = require('../constants');
 
 /* ---------- Public: submit ---------- */
-function submit(req, res) {
+async function submit(req, res) {
   if (req.honeypotTripped) return res.json({ ok: true }); // pretend success
-  const id = Enquiry.create(req.enquiry);
-  sendEnquiryNotification(req.enquiry, Settings.get('site_name')).catch(err => console.error('[mail] failed:', err.message));
+  const id = await Enquiry.create(req.enquiry);
+  const siteName = await Settings.get('site_name');
+  sendEnquiryNotification(req.enquiry, siteName).catch(err => console.error('[mail] failed:', err.message));
   res.status(201).json({ ok: true, id });
 }
 
 /* ---------- Admin ---------- */
-function list(req, res) {
+async function list(req, res) {
   const status = ENQUIRY_STATUSES.includes(req.query.status) ? req.query.status : undefined;
-  res.json({ items: Enquiry.all(status), counts: Enquiry.counts() });
+  const [items, counts] = await Promise.all([Enquiry.all(status), Enquiry.counts()]);
+  res.json({ items, counts });
 }
-function get(req, res) {
-  const e = Enquiry.get(req.params.id);
+async function get(req, res) {
+  const e = await Enquiry.get(req.params.id);
   if (!e) return res.status(404).json({ success: false, message: 'Enquiry not found', error: 'ENQUIRY_NOT_FOUND' });
-  if (e.status === 'new') { Enquiry.setStatus(e.id, 'read'); e.status = 'read'; }
+  if (e.status === 'new') { await Enquiry.setStatus(e.id, 'read'); e.status = 'read'; }
   res.json(e);
 }
-function setStatus(req, res) {
+async function setStatus(req, res) {
   const status = req.body?.status;
   if (!ENQUIRY_STATUSES.includes(status)) return res.status(400).json({ success: false, message: 'Invalid status', error: 'VALIDATION_ERROR' });
-  Enquiry.setStatus(req.params.id, status);
+  await Enquiry.setStatus(req.params.id, status);
   res.json({ ok: true });
 }
-function remove(req, res) { Enquiry.remove(req.params.id); res.json({ ok: true }); }
+async function remove(req, res) { await Enquiry.remove(req.params.id); res.json({ ok: true }); }
 
 module.exports = { submit, list, get, setStatus, remove };

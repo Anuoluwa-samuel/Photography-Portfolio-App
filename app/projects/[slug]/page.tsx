@@ -22,7 +22,7 @@ async function siteUrl() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const data = getProjectData((await params).slug);
+  const data = await getProjectData((await params).slug);
   if (!data) return {};
   const { s, project } = data;
   const url = await siteUrl();
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProjectPage({ params }: Props) {
-  const data = getProjectData((await params).slug);
+  const data = await getProjectData((await params).slug);
   if (!data) notFound();
   const { s, socials, project, images, year, services } = data;
 

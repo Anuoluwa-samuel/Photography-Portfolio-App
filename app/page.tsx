@@ -17,7 +17,7 @@ async function siteUrl() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { s } = getSiteShell();
+  const { s } = await getSiteShell();
   const url = await siteUrl();
   return {
     title: s.seo_title,
@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const d = getHomeData();
+  const d = await getHomeData();
   const { s, socials } = d;
   const url = await siteUrl();
   const wm = s.brand_name.toUpperCase().replace(/[^A-Z]/g, '') || 'A';

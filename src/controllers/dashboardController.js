@@ -4,15 +4,19 @@ const Category = require('../models/Category');
 const Enquiry = require('../models/Enquiry');
 const { ICONS, ENQUIRY_STATUSES } = require('../constants');
 
-function summary(req, res) {
+async function summary(req, res) {
+  // One round-trip per query against Turso, so fire the independent ones together.
+  const [projects, photos, categories, enquiries, recentProjects, allEnquiries] = await Promise.all([
+    Project.count(), Image.count(), Category.all(), Enquiry.counts(), Project.recent(5), Enquiry.all(),
+  ]);
   res.json({
-    projects: Project.count(),
-    photos: Image.count(),
-    categories: Category.all().length,
-    enquiries: Enquiry.counts(),
-    recentProjects: Project.recent(5),
-    recentEnquiries: Enquiry.all().slice(0, 5),
-    meta: { categories: Category.all(), icons: ICONS, statuses: ENQUIRY_STATUSES },
+    projects,
+    photos,
+    categories: categories.length,
+    enquiries,
+    recentProjects,
+    recentEnquiries: allEnquiries.slice(0, 5),
+    meta: { categories, icons: ICONS, statuses: ENQUIRY_STATUSES },
   });
 }
 

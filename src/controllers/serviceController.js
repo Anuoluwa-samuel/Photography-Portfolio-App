@@ -15,28 +15,28 @@ function serviceFromBody(b, fallback = {}) {
   };
 }
 
-function list(req, res) { res.json({ items: Service.all(), icons: ICONS }); }
+async function list(req, res) { res.json({ items: await Service.all(), icons: ICONS }); }
 
-function create(req, res) {
+async function create(req, res) {
   const s = serviceFromBody(req.body || {});
   if (!s.name) return res.status(400).json({ success: false, message: 'Service name is required.', error: 'VALIDATION_ERROR' });
-  const id = Service.create(s);
-  res.status(201).json({ ok: true, item: Service.get(id) });
+  const id = await Service.create(s);
+  res.status(201).json({ ok: true, item: await Service.get(id) });
 }
 
-function update(req, res) {
-  const cur = Service.get(req.params.id);
+async function update(req, res) {
+  const cur = await Service.get(req.params.id);
   if (!cur) return res.status(404).json({ success: false, message: 'Service not found', error: 'SERVICE_NOT_FOUND' });
   const s = serviceFromBody(req.body || {}, cur);
   if (!s.name) return res.status(400).json({ success: false, message: 'Service name is required.', error: 'VALIDATION_ERROR' });
-  Service.update(cur.id, s);
-  res.json({ ok: true, item: Service.get(cur.id) });
+  await Service.update(cur.id, s);
+  res.json({ ok: true, item: await Service.get(cur.id) });
 }
 
-function remove(req, res) { Service.remove(req.params.id); res.json({ ok: true }); }
+async function remove(req, res) { await Service.remove(req.params.id); res.json({ ok: true }); }
 
-function reorder(req, res) {
-  Service.reorder((req.body?.ids || []).map(Number).filter(Number.isInteger));
+async function reorder(req, res) {
+  await Service.reorder((req.body?.ids || []).map(Number).filter(Number.isInteger));
   res.json({ ok: true });
 }
 

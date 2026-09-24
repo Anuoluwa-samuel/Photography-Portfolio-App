@@ -11,7 +11,7 @@ const cookieSession = require('cookie-session');
 const next = require('next');
 
 const env = require('./src/config/environment');
-require('./src/config/database'); // connects + runs schema/migrations before anything else touches the db
+const { init: initDb } = require('./src/config/database');
 
 const publicRoutes = require('./src/routes/public');
 const adminRoutes = require('./src/routes/admin');
@@ -92,7 +92,11 @@ app.use((req, res) => handleNext(req, res));
 /* ---------- Errors ---------- */
 app.use(errorHandler);
 
-nextApp.prepare().then(() => {
+// Local convenience: ensure the schema exists before serving. In production the schema is created
+// once by `npm run db:init`, never per boot — concurrent serverless instances would race.
+const prepare = env.isProd ? nextApp.prepare() : initDb().then(() => nextApp.prepare());
+
+prepare.then(() => {
   server.listen(env.PORT, () => {
     console.log(`\n  ${env.SITE_NAME} is running (${dev ? 'development' : 'production'})`);
     console.log(`  Site:   http://localhost:${env.PORT}`);

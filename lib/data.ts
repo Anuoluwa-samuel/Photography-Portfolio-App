@@ -34,12 +34,14 @@ const root = process.cwd();
 const nodeRequire = createRequire(path.join(root, 'server.js'));
 const load = <T,>(file: string): T => nodeRequire(path.join(root, 'src', file)) as T;
 
+// The models are async now (libSQL over the network in production), so every accessor below
+// returns a promise and the pages awaiting them are async server components.
 const models = () => ({
-  Settings: load<{ all(): Settings }>('models/Settings'),
-  Project: load<{ all(o: { publishedOnly: boolean }): Project[]; featured(n: number): Project[]; bySlug(s: string): Project | undefined }>('models/Project'),
-  Image: load<{ forProject(id: number): ProjectImage[] }>('models/Image'),
-  Category: load<{ allActive(): Category[] }>('models/Category'),
-  Service: load<{ all(activeOnly: boolean): Service[] }>('models/Service'),
+  Settings: load<{ all(): Promise<Settings> }>('models/Settings'),
+  Project: load<{ all(o: { publishedOnly: boolean }): Promise<Project[]>; featured(n: number): Promise<Project[]>; bySlug(s: string): Promise<Project | undefined> }>('models/Project'),
+  Image: load<{ forProject(id: number): Promise<ProjectImage[]> }>('models/Image'),
+  Category: load<{ allActive(): Promise<Category[]> }>('models/Category'),
+  Service: load<{ all(activeOnly: boolean): Promise<Service[]> }>('models/Service'),
   constants: load<{ SOCIALS: string[] }>('constants'),
 });
 
@@ -47,32 +49,44 @@ const safeJson = <T,>(str: string | undefined, fallback: T): T => {
   try { return JSON.parse(str ?? '') as T; } catch { return fallback; }
 };
 
-export function getSiteShell() {
+export async function getSiteShell() {
   const m = models();
-  const s = m.Settings.all();
+  const s = await m.Settings.all();
   const socials = m.constants.SOCIALS.map(key => ({ key, url: s['social_' + key] })).filter((x): x is Social => !!x.url);
   return { s, socials, year: new Date().getFullYear() };
 }
 
-export function getHomeData() {
+export async function getHomeData() {
   const m = models();
-  const shell = getSiteShell();
+  // Independent queries — one network round-trip each against Turso, so run them concurrently.
+  const [shell, categories, projects, featured, services] = await Promise.all([
+    getSiteShell(),
+    m.Category.allActive(),
+    m.Project.all({ publishedOnly: true }),
+    m.Project.featured(3),
+    m.Service.all(true),
+  ]);
   return {
     ...shell,
-    categories: m.Category.allActive(),
-    projects: m.Project.all({ publishedOnly: true }),
-    featured: m.Project.featured(3),
-    services: m.Service.all(true),
+    categories,
+    projects,
+    featured,
+    services,
     aboutPoints: safeJson<AboutPoint[]>(shell.s.about_points, []),
     stats: safeJson<Stat[]>(shell.s.stats, []),
   };
 }
 
-export function getProjectData(slug: string) {
+export async function getProjectData(slug: string) {
   const m = models();
-  const project = m.Project.bySlug(slug);
+  const project = await m.Project.bySlug(slug);
   if (!project || !project.published) return null;
-  return { ...getSiteShell(), project, images: m.Image.forProject(project.id), services: m.Service.all(true) };
+  const [shell, images, services] = await Promise.all([
+    getSiteShell(),
+    m.Image.forProject(project.id),
+    m.Service.all(true),
+  ]);
+  return { ...shell, project, images, services };
 }
 
 /** Absolute site URL for canonical / Open Graph tags. */

@@ -8,9 +8,9 @@ function requireAdmin(req, res, next) {
   return res.redirect('/admin/login');
 }
 
-function login(req, res) {
+async function login(req, res) {
   const { username = '', password = '' } = req.body || {};
-  const user = User.byUsername(String(username).trim());
+  const user = await User.byUsername(String(username).trim());
   if (!user || !bcrypt.compareSync(String(password), user.password_hash)) {
     return res.status(401).json({ success: false, message: 'Wrong username or password.', error: 'INVALID_CREDENTIALS' });
   }

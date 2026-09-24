@@ -1,7 +1,7 @@
 {
   "name": "yito-shot-it",
   "version": "1.0.0",
-  "description": "YIT0 SHOT IT — photography portfolio with a project-based admin CMS (Next.js + Express + SQLite)",
+  "description": "YIT0 SHOT IT \u2014 photography portfolio with a project-based admin CMS (Next.js + Express + SQLite)",
   "main": "server.js",
   "scripts": {
     "dev": "node server.js",
@@ -10,11 +10,13 @@
     "typecheck": "tsc --noEmit",
     "reset-db": "node scripts/reset-db.js",
     "change-password": "node scripts/change-password.js",
-    "check:grid": "node scripts/check-grid.js"
+    "check:grid": "node scripts/check-grid.js",
+    "db:init": "node scripts/db-init.js"
   },
   "keywords": [],
   "author": "",
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "clsx": "^2.1.1",

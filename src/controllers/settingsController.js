@@ -3,9 +3,9 @@ const { clean, safeJson } = require('../utils/text');
 const { ICONS } = require('../constants');
 const imageService = require('../services/imageService');
 
-function get(req, res) { res.json({ settings: Settings.all(), icons: ICONS }); }
+async function get(req, res) { res.json({ settings: await Settings.all(), icons: ICONS }); }
 
-function update(req, res) {
+async function update(req, res) {
   const allowed = new Set(Settings.keys());
   const patch = {};
   for (const [k, v] of Object.entries(req.body || {})) {
@@ -20,8 +20,8 @@ function update(req, res) {
       patch[k] = clean(v, 5000);
     }
   }
-  Settings.setMany(patch);
-  res.json({ ok: true, settings: Settings.all() });
+  await Settings.setMany(patch);
+  res.json({ ok: true, settings: await Settings.all() });
 }
 
 async function uploadImage(req, res) {
@@ -29,9 +29,9 @@ async function uploadImage(req, res) {
   if (!['hero_image', 'about_image'].includes(key)) return res.status(400).json({ success: false, message: 'Unknown image slot', error: 'VALIDATION_ERROR' });
   if (!req.file) return res.status(400).json({ success: false, message: 'No image received.', error: 'VALIDATION_ERROR' });
   const url = await imageService.processSiteImage(req.file.buffer, key);
-  const old = Settings.get(key);
-  if (old.startsWith('/uploads/site/')) imageService.removeSiteFile(old);
-  Settings.set(key, url);
+  const old = await Settings.get(key);
+  if (old.startsWith('/uploads/site/')) await imageService.removeSiteFile(old);
+  await Settings.set(key, url);
   res.json({ ok: true, url });
 }
 
