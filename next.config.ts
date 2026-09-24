@@ -9,6 +9,19 @@ const { nextHeaders } = require_('./src/config/securityHeaders') as {
 
 // Non-/api paths that the Express app owns. Next rewrites them onto the catch-all API route, which
 // strips the prefix and restores the original path before handing the request to Express.
+// Runtime dependency closure of @libsql/client, computed from its package.json tree. Types-only
+// packages (@types/*, undici-types) are left out. ./node_modules/@libsql/** also covers the
+// per-platform native builds, so Vercel's linux-x64 binary is picked up without naming it.
+const LIBSQL_RUNTIME = [
+  './node_modules/@libsql/**',
+  './node_modules/libsql/**',
+  './node_modules/js-base64/**',
+  './node_modules/promise-limit/**',
+  './node_modules/@neon-rs/**',
+  './node_modules/detect-libc/**',
+  './node_modules/ws/**',
+];
+
 const EXPRESS_PATHS = ['/admin', '/admin/:path*', '/robots.txt', '/sitemap.xml', '/healthz'];
 
 const nextConfig: NextConfig = {
@@ -33,8 +46,12 @@ const nextConfig: NextConfig = {
     // follows src/** but never sees the require('@libsql/client') inside src/config/database.js.
     // Without these the page functions deploy without the driver and 500 with MODULE_NOT_FOUND,
     // while /api/* — traced normally through pages/api — keeps working.
-    '/': ['./node_modules/@libsql/**', './node_modules/libsql/**'],
-    '/projects/[slug]': ['./node_modules/@libsql/**', './node_modules/libsql/**'],
+    // The whole runtime closure, not just the @libsql scope: js-base64, promise-limit, ws,
+    // detect-libc and @neon-rs/load are siblings at the top level of node_modules, and a glob
+    // over @libsql/** silently misses them. The first attempt did exactly that and the pages
+    // still 500'd, on "Cannot find module 'js-base64'".
+    '/': [...LIBSQL_RUNTIME],
+    '/projects/[slug]': [...LIBSQL_RUNTIME],
   },
 
   // Express/helmet only sees /api/* and the rewritten routes. On Vercel the pages below are rendered
