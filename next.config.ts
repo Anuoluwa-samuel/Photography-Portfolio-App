@@ -62,7 +62,8 @@ const nextConfig: NextConfig = {
   // cache-busting). Vercel serves public/ from the CDN and does not put it in the function bundle,
   // so trace these files in explicitly or versionedHtml() throws ENOENT on every /admin request.
   outputFileTracingIncludes: {
-    '/api/[[...path]]': ['./public/admin/**'],
+    // admin-pages/ holds the HTML; public/admin/** is still needed so versionedHtml can hash the CSS/JS.
+    '/api/[[...path]]': ['./admin-pages/**', './public/admin/**'],
     // lib/data.ts reaches the CommonJS models through createRequire at runtime, so the tracer
     // follows src/** but never sees the require('@libsql/client') inside src/config/database.js.
     // Without these the page functions deploy without the driver and 500 with MODULE_NOT_FOUND,

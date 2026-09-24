@@ -21,6 +21,11 @@ const { cspDirectives } = require('./config/securityHeaders');
 // cwd is the project root both locally and inside a Vercel function (/var/task).
 const ROOT = process.cwd();
 const PUBLIC_DIR = path.join(ROOT, 'public');
+// The admin HTML deliberately lives OUTSIDE public/. Anything in public/ is served straight from
+// Vercel's CDN before a function runs, so keeping index.html there let /admin return the dashboard
+// shell to anonymous visitors — the requireAdmin gate never executed — and served it raw, without
+// the ?v= content hashes versionedHtml adds. Its CSS/JS stay in public/ as real static assets.
+const ADMIN_PAGES_DIR = path.join(ROOT, 'admin-pages');
 
 /**
  * @param {Function} [terminal] middleware for requests no Express route matched. server.js passes the
@@ -71,7 +76,7 @@ function createApp(terminal) {
   // These read public/admin/* from disk, which is why next.config.ts traces that folder into the function.
   const sendAdminPage = (res, file) => {
     res.set('Cache-Control', 'no-cache');
-    res.type('html').send(versionedHtml(path.join(PUBLIC_DIR, 'admin', file), PUBLIC_DIR, env.isProd));
+    res.type('html').send(versionedHtml(path.join(ADMIN_PAGES_DIR, file), PUBLIC_DIR, env.isProd));
   };
   app.get('/admin/login', (req, res) => {
     if (req.session?.userId) return res.redirect('/admin');
