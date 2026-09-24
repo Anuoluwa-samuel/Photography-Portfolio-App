@@ -1,7 +1,7 @@
 {
   "name": "yito-shot-it",
   "version": "1.0.0",
-  "description": "YIT0 SHOT IT \u2014 photography portfolio with a project-based admin CMS (Next.js + Express + SQLite)",
+  "description": "YIT0 SHOT IT — photography portfolio with a project-based admin CMS (Next.js + Express + SQLite)",
   "main": "server.js",
   "scripts": {
     "dev": "node server.js",
@@ -17,6 +17,7 @@
   "author": "",
   "dependencies": {
     "@libsql/client": "^0.18.0",
+    "@vercel/blob": "^2.8.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "clsx": "^2.1.1",

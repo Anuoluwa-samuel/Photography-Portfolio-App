@@ -30,7 +30,7 @@ async function uploadImage(req, res) {
   if (!req.file) return res.status(400).json({ success: false, message: 'No image received.', error: 'VALIDATION_ERROR' });
   const url = await imageService.processSiteImage(req.file.buffer, key);
   const old = await Settings.get(key);
-  if (old.startsWith('/uploads/site/')) await imageService.removeSiteFile(old);
+  await imageService.removeSiteFile(old); // no-ops unless we own it (local upload or our Blob store)
   await Settings.set(key, url);
   res.json({ ok: true, url });
 }

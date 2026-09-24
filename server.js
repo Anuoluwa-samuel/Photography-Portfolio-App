@@ -37,7 +37,9 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", ...(dev ? ["'unsafe-eval'"] : [])],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-      imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com'], // placeholder photos; remove once you upload your own
+      // unsplash = placeholder photos (remove once you upload your own);
+      // *.public.blob.vercel-storage.com = uploads once BLOB_READ_WRITE_TOKEN is set.
+      imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com', 'https://*.public.blob.vercel-storage.com'],
       connectSrc: ["'self'", ...(dev ? ['ws:', 'wss:'] : [])],             // dev: hot reload websocket
       frameAncestors: ["'none'"],
       upgradeInsecureRequests: env.isProd ? [] : null,
