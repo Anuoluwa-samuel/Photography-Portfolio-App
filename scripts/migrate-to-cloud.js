@@ -83,6 +83,9 @@ async function main() {
     const { put } = require('@vercel/blob');
     const res = await put(url.replace(/^\/uploads\//, ''), fs.readFileSync(file), {
       access: 'public', token: BLOB_READ_WRITE_TOKEN, contentType: 'image/webp', addRandomSuffix: false,
+      // Re-runs are normal (a failed attempt, or moving the database to another region while the
+      // same Blob store is reused), and the bytes are identical, so overwrite rather than fail.
+      allowOverwrite: true,
     });
     urlMap.set(url, res.url);
     console.log(`    uploaded ${url}  ->  ${res.url}`);
