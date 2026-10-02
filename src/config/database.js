@@ -127,6 +127,16 @@ CREATE TABLE IF NOT EXISTS services (
   sort INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS testimonials (
+  id INTEGER PRIMARY KEY,
+  quote TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  meta TEXT NOT NULL DEFAULT '',
+  photo TEXT NOT NULL DEFAULT '',
+  active INTEGER NOT NULL DEFAULT 1,
+  sort INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS enquiries (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
@@ -154,7 +164,7 @@ const DEFAULT_SETTINGS = {
   brand_name: 'YIT0',
   brand_tagline: 'shot it',
   site_name: 'YIT0 SHOT IT',
-  photographer_name: 'Samuel Adeyemi',
+  photographer_name: 'Adeleye Akindele',
   // SEO
   seo_title: 'YIT0 SHOT IT | Portrait & Wedding Photographer in Lagos, Nigeria',
   seo_description: 'YIT0 SHOT IT is a Lagos-based portrait, wedding and editorial photography studio creating cinematic, timeless imagery. View the portfolio, explore services and book a session.',
@@ -172,10 +182,10 @@ const DEFAULT_SETTINGS = {
   featured_intro: 'A quick look before the full portfolio: one portrait, one wedding, one editorial. Each was made with available light and a lot of patience.',
   // About
   about_title: 'Who is [[behind]] the lens',
-  about_bio: "I'm Samuel Adeyemi, a photographer working out of Lagos for the past nine years. I started with a borrowed film camera at university events and never quite put it down.\n\nToday I split my time between studio portraiture, weddings across Nigeria and editorial work for fashion and lifestyle brands. My approach is simple: slow down, find the light, and let people be themselves in front of it.",
+  about_bio: "I'm Adeleye Akindele, a photographer working out of Lagos for the past nine years. I started with a borrowed film camera at university events and never quite put it down.\n\nToday I split my time between studio portraiture, weddings across Nigeria and editorial work for fashion and lifestyle brands. My approach is simple: slow down, find the light, and let people be themselves in front of it.",
   about_quote: "I'm not chasing perfect. I'm chasing the second before someone remembers the camera is there.",
   about_image: U('1507003211169-0a1dd7228f2d', 800, 1000),
-  about_image_alt: 'Portrait of photographer Samuel Adeyemi holding a camera',
+  about_image_alt: 'Portrait of photographer Adeleye Akindele holding a camera',
   about_points: JSON.stringify([
     { icon: 'sun',   title: 'Natural light first', text: 'Flash only when the story needs it. Most of the work here is sun, shade and a reflector.' },
     { icon: 'eye',   title: 'Documentary eye',     text: 'Minimal posing. I direct just enough, then step back and wait for the real thing.' },
@@ -199,8 +209,8 @@ const DEFAULT_SETTINGS = {
   contact_title: "Let's make [[something]]",
   contact_intro: 'Tell me about your session, wedding or campaign. I reply to every enquiry within one working day, and dates go quickly between November and February.',
   // Contact details
-  email: 'hello@yito.shotit.com',
-  phone: '+234 800 000 0000',
+  email: 'yit0shotit@gmail.com',
+  phone: '+234 902 114 6134',
   location: 'Lagos, Nigeria — available across Nigeria and for destination weddings',
   location_short: 'Lagos, Nigeria',
   hours: 'Mon–Sat, 9am–6pm WAT',
@@ -380,6 +390,17 @@ async function migrateBrandRename() {
   }
 }
 
+/* One-time move: the single testimonial that lived in settings becomes the first testimonials row. */
+async function migrateTestimonialSetting() {
+  if (!(await isEmpty('testimonials'))) return;
+  const get = async (key) => (await db.prepare('SELECT value FROM settings WHERE key = ?').get(key))?.value || '';
+  const quote = await get('testimonial_text');
+  if (!quote.trim()) return;
+  await db.prepare('INSERT INTO testimonials (quote, name, meta, sort) VALUES (?, ?, ?, 0)')
+          .run(quote, await get('testimonial_name'), await get('testimonial_meta'));
+  logger.info('Moved the settings testimonial into the testimonials table.');
+}
+
 /**
  * Create the schema, seed first-run data and apply the one-time migrations.
  * Idempotent, but must not be run concurrently — call it from `npm run db:init`, not per request.
@@ -393,6 +414,7 @@ async function init() {
   await seedServices();
   await seedUsers();
   await migrateBrandRename();
+  await migrateTestimonialSetting();
   return { url: env.DB_URL };
 }
 

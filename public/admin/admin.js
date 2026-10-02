@@ -258,6 +258,65 @@ const views = {
     enableDragSort('#svcList', '.svc-row', async ids => { await api('/services/order', { method: 'PUT', body: { ids } }); toast('Order saved.'); });
   },
 
+  /* ---------- Testimonials ---------- */
+  async testimonials() {
+    title.textContent = 'Testimonials';
+    const { items } = await api('/testimonials');
+    view.innerHTML = `
+      <div class="card">
+        <div class="card-head"><h2>Testimonials <em>(${items.length})</em></h2><button class="btn btn-primary btn-sm" id="addTst">Add testimonial</button></div>
+        <p class="hint" style="margin:-6px 0 16px">One shows as a single quote; two or more become a carousel. Drag to reorder.</p>
+        ${items.length ? `<div class="svc-list" id="tstList">${items.map(t => `
+          <div class="svc-row ${t.active ? '' : 'inactive'}" data-id="${t.id}" draggable="true">
+            <span class="handle" title="Drag to reorder">⋮⋮</span>
+            <div style="display:flex;gap:14px;align-items:center">
+              ${t.photo ? `<img src="${esc(t.photo)}" alt="" style="width:48px;aspect-ratio:4/5;object-fit:cover;border-radius:6px;flex-shrink:0">` : ''}
+              <div><div class="n">${esc(t.name) || '<span class="dim">No name</span>'} ${t.active ? '' : '<span class="badge">hidden</span>'}</div><div class="p">${esc(t.meta)}</div><div class="dim">${esc(t.quote)}</div></div>
+            </div>
+            <div class="actions btns"><button class="icon-btn" data-act="edit" title="Edit">✎</button><button class="icon-btn danger" data-act="delete" title="Delete">✕</button></div>
+          </div>`).join('')}</div>` : '<p class="empty">No testimonials yet. The section is hidden until you add one.</p>'}
+      </div>`;
+
+    const openEditor = (t = { quote: '', name: '', meta: '', photo: '', active: 1 }) => {
+      openModal(`
+        <h2>${t.id ? 'Edit' : 'New'} <em>testimonial</em></h2>
+        <form id="tstForm" style="margin-top:18px">
+          ${textarea('Quote <small>no quotation marks, they are added for you</small>', 'quote', t.quote, 4)}
+          <div class="form-row">${field('Client name <small>e.g. Tolu & Damilare</small>', 'name', t.name)}${field('Context <small>e.g. Wedding, Abuja</small>', 'meta', t.meta)}</div>
+          <div class="slot" style="margin:6px 0 14px">
+            ${t.photo ? `<img src="${esc(t.photo)}" alt="">` : '<div style="width:112px;aspect-ratio:4/5;border-radius:8px;border:1px dashed var(--line)"></div>'}
+            <div><div class="eyebrow" style="margin-bottom:8px">Photo from their shoot <small class="dim">(optional)</small></div>
+              <input type="file" accept="image/*" name="_photo" style="font-size:.85rem;color:var(--muted)">
+              ${t.photo ? '<label class="check" style="margin-top:10px"><input type="checkbox" name="_removePhoto"> Remove photo</label>' : ''}
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" name="active" ${t.active ? 'checked' : ''}> Show on the website</label>
+          <div class="actions" style="margin-top:20px"><button class="btn btn-primary" type="submit">Save testimonial</button></div>
+        </form>`);
+      $('#tstForm').addEventListener('submit', async ev => {
+        ev.preventDefault();
+        const fd = new FormData(ev.target), btn = $('button[type=submit]', ev.target);
+        const body = { quote: fd.get('quote'), name: fd.get('name'), meta: fd.get('meta'), active: fd.get('active') === 'on' };
+        const file = fd.get('_photo');
+        btn.disabled = true;
+        try {
+          const { item } = await (t.id ? api(`/testimonials/${t.id}`, { method: 'PATCH', body }) : api('/testimonials', { method: 'POST', body }));
+          if (file && file.size) { const up = new FormData(); up.append('photo', file); await api(`/testimonials/${item.id}/photo`, { method: 'POST', form: up }); }
+          else if (fd.get('_removePhoto') === 'on') await api(`/testimonials/${item.id}/photo`, { method: 'DELETE' });
+          closeModal(); toast('Testimonial saved.'); views.testimonials();
+        } catch (e) { toast(e.message, true); btn.disabled = false; }
+      });
+    };
+    $('#addTst').addEventListener('click', () => openEditor());
+    view.onclick = async e => {
+      const btn = e.target.closest('[data-act]'); if (!btn) return;
+      const id = btn.closest('.svc-row').dataset.id, t = items.find(x => x.id == id);
+      if (btn.dataset.act === 'edit') openEditor(t);
+      if (btn.dataset.act === 'delete' && confirmIt(`Delete the testimonial from "${t.name || 'this client'}"?`)) { await api(`/testimonials/${id}`, { method: 'DELETE' }); toast('Testimonial deleted.'); views.testimonials(); }
+    };
+    enableDragSort('#tstList', '.svc-row', async ids => { await api('/testimonials/order', { method: 'PUT', body: { ids } }); toast('Order saved.'); });
+  },
+
   /* ---------- Site content / settings ---------- */
   async settings() {
     title.textContent = 'Site content';
@@ -310,11 +369,6 @@ const views = {
           <div class="form-row">${field('Portfolio heading', 'portfolio_title', s.portfolio_title)}${field('Services heading', 'services_title', s.services_title)}</div>
           ${textarea('Portfolio intro', 'portfolio_intro', s.portfolio_intro, 2)}
           ${textarea('Services intro', 'services_intro', s.services_intro, 2)}
-        </fieldset>
-
-        <fieldset><legend>Testimonial</legend>
-          ${textarea('Quote <small>leave empty to hide the section</small>', 'testimonial_text', s.testimonial_text, 3)}
-          <div class="form-row">${field('Client name', 'testimonial_name', s.testimonial_name)}${field('Context', 'testimonial_meta', s.testimonial_meta)}</div>
         </fieldset>
 
         <fieldset><legend>Contact</legend>

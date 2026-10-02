@@ -1,8 +1,9 @@
 const Project = require('../models/Project');
 const Category = require('../models/Category');
 const Service = require('../models/Service');
+const env = require('../config/environment');
 
-function siteUrlFor(req) { return process.env.SITE_URL || `${req.protocol}://${req.get('host')}`; }
+function siteUrlFor(req) { return env.SITE_URL || `${req.protocol}://${req.get('host')}`; }
 
 /* ---------- Read-only JSON ---------- */
 async function apiProjects(req, res) {

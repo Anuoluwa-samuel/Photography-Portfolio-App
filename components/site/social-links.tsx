@@ -2,6 +2,8 @@ import type { Social } from '@/lib/data';
 import { Icon } from '@/components/icons/sprite';
 import { cn } from '@/lib/utils';
 
+const LABELS: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', x: 'X (Twitter)', linkedin: 'LinkedIn', youtube: 'YouTube' };
+
 export function SocialLinks({ socials, className }: { socials: Social[]; className?: string }) {
   if (!socials.length) return null;
   return (
@@ -12,7 +14,7 @@ export function SocialLinks({ socials, className }: { socials: Social[]; classNa
           href={x.url}
           target="_blank"
           rel="noopener"
-          aria-label={x.key}
+          aria-label={LABELS[x.key] ?? x.key}
           className="grid size-11 place-items-center rounded-full border border-border text-muted-foreground transition-[border-color,color,transform,box-shadow] duration-300 lg:size-[40px] hover:-translate-y-[3px] hover:border-brand hover:text-brand hover:shadow-[0_10px_22px_-10px_var(--brand-glow)]"
         >
           <Icon name={x.key} className="size-[16px] stroke-[1.6]" />

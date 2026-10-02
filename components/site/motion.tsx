@@ -114,18 +114,20 @@ export function HeroParallax({ className, children }: { className?: string; chil
 ------------------------------------------------------------------ */
 export function CountUp({ value, suffix = '', className }: { value: number; suffix?: string; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [n, setN] = useState(0);
+  // Start at the real value so the server HTML (crawlers, link previews, no-JS, reduced motion)
+  // shows the actual number; the count-up from 0 only runs in the browser when it scrolls into view.
+  const [n, setN] = useState(value);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || prefersReducedMotion()) { setN(value); return; }
     let raf = 0;
     const obs = new IntersectionObserver(([en]) => {
       if (!en.isIntersecting) return;
       obs.disconnect();
-      const dur = prefersReducedMotion() ? 0 : 1600, t0 = performance.now();
+      const dur = 1600, t0 = performance.now();
       const tick = (now: number) => {
-        const p = dur ? Math.min(1, (now - t0) / dur) : 1;
+        const p = Math.min(1, (now - t0) / dur);
         setN(Math.round(value * (1 - Math.pow(1 - p, 3))));
         if (p < 1) raf = requestAnimationFrame(tick);
       };

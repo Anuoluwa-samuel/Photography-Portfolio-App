@@ -63,7 +63,7 @@ export default async function HomePage() {
         <About s={s} aboutPoints={d.aboutPoints} stats={d.stats} letter={letter(1)} />
         <Portfolio s={s} projects={d.projects} categories={d.categories} letter={letter(2)} />
         <Services s={s} services={d.services} letter={letter(3)} />
-        <Testimonial s={s} />
+        <Testimonial testimonials={d.testimonials} />
         <Contact s={s} socials={socials} services={d.services} letter={letter(4)} />
       </main>
 

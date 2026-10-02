@@ -1,4 +1,4 @@
-import type { AboutPoint, Category, Project, Service, Settings, Social, Stat } from '@/lib/data';
+import type { AboutPoint, Category, Project, Service, Settings, Social, Stat, Testimonial as TestimonialItem } from '@/lib/data';
 import { Accent, paragraphs, telHref } from '@/lib/text';
 import { cn, cssVars } from '@/lib/utils';
 import { Icon } from '@/components/icons/sprite';
@@ -9,6 +9,7 @@ import { FeaturedReel } from '@/components/site/featured-reel';
 import { PortfolioCarousel } from '@/components/site/portfolio-carousel';
 import { BookServiceLink, EnquiryPanel } from '@/components/site/enquiry-form';
 import { SocialLinks } from '@/components/site/social-links';
+import { TestimonialCarousel } from '@/components/site/testimonial-carousel';
 
 function SectionHead({ eyebrow, title, titleId, intro }: { eyebrow: string; title: string; titleId: string; intro: string }) {
   return (
@@ -92,7 +93,7 @@ export function About({ s, aboutPoints, stats, letter }: { s: Settings; aboutPoi
               <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-black/85 to-transparent to-55%" />
               {s.about_quote && (
                 <p className="absolute inset-x-[24px] bottom-[24px] z-[2] font-display text-[1.05rem] font-light leading-[1.45] text-white">
-                  <span className="mr-1 align-[-.3em] text-[2.4rem] leading-none text-brand-bright">“</span>{s.about_quote}
+                  <span className="mr-1 align-[-.3em] text-[2.4rem] leading-none text-brand-bright">“</span>{s.about_quote}”
                 </p>
               )}
             </div>
@@ -194,19 +195,38 @@ export function Services({ s, services, letter }: { s: Settings; services: Servi
 }
 
 /* ================= TESTIMONIAL ================= */
-export function Testimonial({ s }: { s: Settings }) {
-  if (!s.testimonial_text) return null;
+function Quote({ t }: { t: TestimonialItem }) {
   return (
-    <section aria-label="Client testimonial" className="section !pt-0">
+    <figure className={cn('mx-auto max-w-[824px]', t.photo && 'grid items-center gap-[clamp(28px,4vw,56px)] sm:grid-cols-[minmax(0,200px)_1fr]')}>
+      {t.photo && (
+        <div className="relative mx-auto aspect-[4/5] w-[160px] overflow-hidden rounded-[20px] bg-card sm:w-full">
+          <SmartImage src={t.photo} width={400} height={500} loading="lazy" alt={t.name} className="size-full object-cover" />
+        </div>
+      )}
+      <div className={cn('text-center', t.photo && 'sm:text-left')}>
+        <blockquote className="font-display text-[clamp(1.4rem,3vw,2.2rem)] font-light leading-[1.35]">
+          <span aria-hidden="true" className="mb-[16px] block text-[4rem] leading-[.6] text-brand">“</span>
+          {t.quote}”
+        </blockquote>
+        {(t.name || t.meta) && (
+          <figcaption className="mt-[24px] font-sans text-[.8rem] uppercase tracking-[.2em] text-muted-foreground">
+            {t.name && <b className="font-medium text-brand">{t.name}</b>}{t.name && t.meta && ' — '}{t.meta}
+          </figcaption>
+        )}
+      </div>
+    </figure>
+  );
+}
+
+export function Testimonial({ testimonials }: { testimonials: TestimonialItem[] }) {
+  if (!testimonials.length) return null;
+  return (
+    <section aria-label="Client testimonials" className="section !pt-0">
       <div className="site-container">
         <Reveal>
-          <blockquote className="mx-auto max-w-[824px] text-center font-display text-[clamp(1.4rem,3vw,2.2rem)] font-light leading-[1.35]">
-            <span aria-hidden="true" className="mb-[16px] block text-[4rem] leading-[.6] text-brand">“</span>
-            {s.testimonial_text}
-            <cite className="mt-[24px] block font-sans text-[.8rem] not-italic uppercase tracking-[.2em] text-muted-foreground">
-              <b className="font-medium text-brand">{s.testimonial_name}</b>{s.testimonial_meta && <> — {s.testimonial_meta}</>}
-            </cite>
-          </blockquote>
+          {testimonials.length === 1
+            ? <Quote t={testimonials[0]} />
+            : <TestimonialCarousel>{testimonials.map(t => <Quote key={t.id} t={t} />)}</TestimonialCarousel>}
         </Reveal>
       </div>
     </section>

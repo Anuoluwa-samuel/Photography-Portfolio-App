@@ -8,6 +8,7 @@ const dashboardController = require('../controllers/dashboardController');
 const projectController = require('../controllers/projectController');
 const categoryController = require('../controllers/categoryController');
 const serviceController = require('../controllers/serviceController');
+const testimonialController = require('../controllers/testimonialController');
 const enquiryController = require('../controllers/enquiryController');
 const settingsController = require('../controllers/settingsController');
 
@@ -66,6 +67,17 @@ router.post('/api/admin/services', serviceController.create);
 router.put('/api/admin/services/order', serviceController.reorder);
 router.patch('/api/admin/services/:id', serviceController.update);
 router.delete('/api/admin/services/:id', serviceController.remove);
+
+/* ---------------------------------------------------------------- */
+/* Testimonials                                                      */
+/* ---------------------------------------------------------------- */
+router.get('/api/admin/testimonials', testimonialController.list);
+router.post('/api/admin/testimonials', testimonialController.create);
+router.put('/api/admin/testimonials/order', testimonialController.reorder);
+router.patch('/api/admin/testimonials/:id', testimonialController.update);
+router.delete('/api/admin/testimonials/:id', testimonialController.remove);
+router.post('/api/admin/testimonials/:id/photo', upload.single('photo'), testimonialController.uploadPhoto);
+router.delete('/api/admin/testimonials/:id/photo', testimonialController.removePhoto);
 
 /* ---------------------------------------------------------------- */
 /* Enquiries                                                         */

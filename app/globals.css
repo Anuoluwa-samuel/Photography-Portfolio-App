@@ -236,6 +236,8 @@
 }
 @keyframes exposure { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .develop-in { animation: develop 1s var(--ease) both; }
+/* Typewriter cursor drawn in CSS so the "_" never lands in the heading's text (search snippets) */
+.type-cursor::after { content: '_'; }
 /* Featured reel "rack focus": --focus (0–1) is set per slide from the carousel's scroll position */
 .reel-frame {
   --focus: 1;

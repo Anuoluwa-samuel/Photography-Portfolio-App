@@ -34,6 +34,7 @@ export interface Service {
 }
 
 export interface Social { key: string; url: string }
+export interface Testimonial { id: number; quote: string; name: string; meta: string; photo: string }
 export interface AboutPoint { icon: string; title: string; text: string }
 export interface Stat { icon: string; label: string; value: number; suffix: string }
 
@@ -49,6 +50,7 @@ const models = () => ({
   Image: load<{ forProject(id: number): Promise<ProjectImage[]> }>('models/Image'),
   Category: load<{ allActive(): Promise<Category[]> }>('models/Category'),
   Service: load<{ all(activeOnly: boolean): Promise<Service[]> }>('models/Service'),
+  Testimonial: load<{ all(activeOnly: boolean): Promise<Testimonial[]> }>('models/Testimonial'),
   constants: load<{ SOCIALS: string[] }>('constants'),
 });
 
@@ -66,19 +68,25 @@ export async function getSiteShell() {
 export async function getHomeData() {
   const m = models();
   // Independent queries — one network round-trip each against Turso, so run them concurrently.
-  const [shell, categories, projects, featured, services] = await Promise.all([
+  const [shell, categories, projects, featured, services, testimonials] = await Promise.all([
     getSiteShell(),
     m.Category.allActive(),
     m.Project.all({ publishedOnly: true }),
     m.Project.featured(3),
     m.Service.all(true),
+    // null until `npm run db:init` has created the table on this database
+    m.Testimonial.all(true).catch(() => null),
   ]);
+  const { s } = shell;
   return {
     ...shell,
     categories,
     projects,
     featured,
     services,
+    testimonials: testimonials ?? (s.testimonial_text
+      ? [{ id: 0, quote: s.testimonial_text, name: s.testimonial_name, meta: s.testimonial_meta, photo: '' }]
+      : []),
     aboutPoints: safeJson<AboutPoint[]>(shell.s.about_points, []),
     stats: safeJson<Stat[]>(shell.s.stats, []),
   };
@@ -98,7 +106,7 @@ export async function getProjectData(slug: string) {
 
 /** Absolute site URL for canonical / Open Graph tags. */
 export function siteUrlFrom(host: string | null, proto: string | null) {
-  return process.env.SITE_URL || `${proto || 'http'}://${host || 'localhost:3000'}`;
+  return load<{ SITE_URL: string }>('config/environment').SITE_URL || `${proto || 'http'}://${host || 'localhost:3000'}`;
 }
 
 export const absolute = (url: string, siteUrl: string) => (url.startsWith('http') ? url : siteUrl + url);

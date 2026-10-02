@@ -17,7 +17,7 @@ export function Accent({ text }: { text: string }) {
           <em key={i}>
             <span className="sr-only">{words[0]}</span>
             <span aria-hidden="true">
-              <Typewriter text={words} speed={70} deleteSpeed={40} waitTime={2200} cursorChar="_" className="tracking-normal" />
+              <Typewriter text={words} speed={70} deleteSpeed={40} waitTime={2200} cursorChar={null} cursorClassName="ml-1 type-cursor" className="tracking-normal" />
             </span>
           </em>
         );

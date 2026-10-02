@@ -9,12 +9,24 @@ if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.startsWith('change
   logger.warn('SESSION_SECRET is not set to a real secret. Edit .env before going live.');
 }
 
+// Public base URL for canonical / Open Graph / sitemap links. An explicit SITE_URL wins, except a
+// localhost one copied over from .env into a Vercel deploy; there, fall back to the project's
+// production domain (Vercel sets this to the custom domain once one is attached). '' means
+// "derive it from the request host".
+function resolveSiteUrl() {
+  const explicit = (process.env.SITE_URL || '').replace(/\/+$/, '');
+  const onVercel = Boolean(process.env.VERCEL);
+  if (explicit && !(onVercel && /\/\/(localhost|127\.0\.0\.1)\b/.test(explicit))) return explicit;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  return '';
+}
+
 module.exports = {
   isProd,
   PORT,
   SITE_NAME: 'YIT0 SHOT IT',
   SESSION_SECRET: process.env.SESSION_SECRET || 'dev-only-secret',
-  SITE_URL: process.env.SITE_URL || '',
+  SITE_URL: resolveSiteUrl(),
   // These are runtime-only paths (local disk / a mounted volume). The turbopackIgnore comments stop
   // Next's file tracer from seeing a dynamic path.resolve and, to be safe, pulling the entire project
   // — public/ included — into the serverless bundle. public/admin is traced in explicitly via
