@@ -4,6 +4,7 @@
 // the bundler compiling a second copy of the database layer.
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 // A real, statically-analysable import of the database driver. The models below are pulled in
 // through createRequire, which Next's file tracer cannot follow into node_modules — so without
 // this the page functions deploy without @libsql/client and every page 500s on MODULE_NOT_FOUND.
@@ -110,3 +111,11 @@ export function siteUrlFrom(host: string | null, proto: string | null) {
 }
 
 export const absolute = (url: string, siteUrl: string) => (url.startsWith('http') ? url : siteUrl + url);
+
+/** Open Graph image: the 1200x630 JPEG rendered by /og-image.jpg from `src`. The ?v= hash changes
+ *  with the photo, so WhatsApp/Facebook (which cache per URL) pick up a replaced image. */
+export function shareImage(src: string, siteUrl: string, alt: string, projectSlug?: string) {
+  const v = createHash('sha1').update(src).digest('hex').slice(0, 10);
+  const project = projectSlug ? `&project=${encodeURIComponent(projectSlug)}` : '';
+  return { url: `${siteUrl}/og-image.jpg?v=${v}${project}`, width: 1200, height: 630, type: 'image/jpeg', alt };
+}

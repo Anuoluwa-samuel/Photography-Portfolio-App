@@ -8,6 +8,7 @@ const { validateEnquiry } = require('../middleware/validation');
 const router = express.Router();
 
 router.get('/sitemap.xml', publicController.sitemap);
+router.get('/og-image.jpg', publicController.shareImage);
 
 router.get('/api/projects', publicController.apiProjects);
 router.get('/api/categories', publicController.apiCategories);

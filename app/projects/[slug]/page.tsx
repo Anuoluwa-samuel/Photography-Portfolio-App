@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { absolute, getProjectData, siteUrlFrom } from '@/lib/data';
+import { getProjectData, shareImage, siteUrlFrom } from '@/lib/data';
 import { brandIcon } from '@/lib/site';
 import { IconSprite, Icon } from '@/components/icons/sprite';
 import { ActionButton } from '@/components/ui/action-button';
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     icons: { icon: brandIcon(s.brand_name) },
     openGraph: {
       type: 'article', siteName: s.site_name, title, description, url: `${url}/projects/${project.slug}`,
-      ...(project.cover_image ? { images: [absolute(project.cover_image, url)] } : {}),
+      ...(project.cover_image ? { images: [shareImage(project.cover_image, url, `Cover photo for ${project.title}`, project.slug)] } : {}),
     },
     twitter: { card: 'summary_large_image' },
   };

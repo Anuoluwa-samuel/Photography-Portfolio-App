@@ -2,6 +2,8 @@ const Project = require('../models/Project');
 const Category = require('../models/Category');
 const Service = require('../models/Service');
 const env = require('../config/environment');
+const Settings = require('../models/Settings');
+const imageService = require('../services/imageService');
 
 function siteUrlFor(req) { return env.SITE_URL || `${req.protocol}://${req.get('host')}`; }
 
@@ -28,4 +30,22 @@ async function sitemap(req, res) {
   res.type('application/xml').send(body);
 }
 
-module.exports = { apiProjects, apiCategories, apiServices, sitemap };
+/* ---------- Social share image ---------- */
+// The stored photos are 4:5 WebP, which WhatsApp and Facebook previews handle unreliably. This crops
+// the hero (or ?project=<slug>'s cover) to a 1200x630 JPEG. The pages add ?v=<hash of the source URL>,
+// so a new photo gets a new URL and the CDN can cache each one for a long time.
+async function shareImage(req, res) {
+  const slug = typeof req.query.project === 'string' ? req.query.project : '';
+  const project = slug ? await Project.bySlug(slug) : null;
+  const src = (project?.published && project.cover_image) || await Settings.get('hero_image');
+  if (!src) return res.status(404).end();
+  try {
+    const jpg = await imageService.renderShareImage(await imageService.loadImage(src));
+    res.set('Cache-Control', 'public, max-age=86400, s-maxage=31536000, immutable').type('image/jpeg').send(jpg);
+  } catch (err) {
+    console.error('[og] could not render share image from', src, '-', err.message);
+    res.redirect(302, src);
+  }
+}
+
+module.exports = { apiProjects, apiCategories, apiServices, sitemap, shareImage };

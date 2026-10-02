@@ -92,7 +92,28 @@ async function processSiteImage(buffer, key) {
   return putFile(`site/${name}`, out);
 }
 
+/** Social share card: 1200x630 JPEG, the size and format WhatsApp, Facebook and X all render reliably. */
+async function renderShareImage(buffer) {
+  return sharp(buffer, { failOn: 'none' }).rotate()
+    .resize({ width: 1200, height: 630, fit: 'cover', position: 'attention' })
+    .jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+}
+
+/** Read a stored image URL back into a buffer: remote (Blob, Unsplash), local upload, or a file in public/. */
+async function loadImage(url) {
+  if (/^https?:\/\//i.test(url)) {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+  const rel = url.split('?')[0];
+  const abs = rel.startsWith('/uploads/')
+    ? path.join(env.UPLOAD_DIR, rel.replace(/^\/uploads\//, ''))
+    : path.join(process.cwd(), 'public', rel);
+  return fs.promises.readFile(abs);
+}
+
 const removeGalleryFile = (url) => removeFile(url);
 const removeSiteFile = (url) => removeFile(url);
 
-module.exports = { processProjectImage, processSiteImage, removeGalleryFile, removeSiteFile, putFile, removeFile, isOwned, USE_BLOB };
+module.exports = { processProjectImage, processSiteImage, renderShareImage, loadImage, removeGalleryFile, removeSiteFile, putFile, removeFile, isOwned, USE_BLOB };

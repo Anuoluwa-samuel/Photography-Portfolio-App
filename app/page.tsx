@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { absolute, getHomeData, getSiteShell, siteUrlFrom } from '@/lib/data';
+import { absolute, getHomeData, getSiteShell, shareImage, siteUrlFrom } from '@/lib/data';
 import { brandIcon } from '@/lib/site';
 import { IconSprite } from '@/components/icons/sprite';
 import { Curtain } from '@/components/site/motion';
@@ -27,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: { icon: brandIcon(s.brand_name) },
     openGraph: {
       type: 'website', siteName: s.site_name, title: s.seo_title, description: s.seo_description,
-      images: [absolute(s.hero_image, url)], url: `${url}/`,
+      images: [shareImage(s.hero_image, url, s.hero_image_alt)], url: `${url}/`,
     },
     twitter: { card: 'summary_large_image' },
   };
@@ -40,12 +40,15 @@ export default async function HomePage() {
   const wm = s.brand_name.toUpperCase().replace(/[^A-Z]/g, '') || 'A';
   const letter = (i: number) => wm[i % wm.length];
 
+  const city = s.location_short.split(',')[0].trim(); // "Lagos, Nigeria" -> "Lagos"
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'ProfessionalService',
     name: s.site_name, description: s.seo_description, url: `${url}/`,
     image: absolute(s.hero_image, url), telephone: s.phone, email: s.email,
-    address: { '@type': 'PostalAddress', addressLocality: s.location_short, addressCountry: 'NG' },
-    areaServed: s.location_short, priceRange: '₦₦₦', sameAs: socials.map(x => x.url),
+    address: { '@type': 'PostalAddress', addressLocality: city, addressCountry: 'NG' },
+    areaServed: [{ '@type': 'City', name: city }, { '@type': 'Country', name: 'Nigeria' }],
+    ...(s.photographer_name ? { founder: { '@type': 'Person', name: s.photographer_name, jobTitle: 'Photographer' } } : {}),
+    priceRange: '₦₦₦', sameAs: socials.map(x => x.url),
   };
 
   return (

@@ -43,7 +43,7 @@ function runtimeClosure(roots: string[]): string[] {
 
 const SRC_RUNTIME = runtimeClosure(SRC_EXTERNALS);
 
-const EXPRESS_PATHS = ['/admin', '/admin/:path*', '/robots.txt', '/sitemap.xml', '/healthz'];
+const EXPRESS_PATHS = ['/admin', '/admin/:path*', '/robots.txt', '/sitemap.xml', '/og-image.jpg', '/healthz'];
 
 const nextConfig: NextConfig = {
   // Both ship native binaries (.node), which cannot be bundled into a server chunk. The App Router
