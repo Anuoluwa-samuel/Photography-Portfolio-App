@@ -1,5 +1,6 @@
 import type { AboutPoint, Category, Project, Service, Settings, Social, Stat, Testimonial as TestimonialItem } from '@/lib/data';
-import { Accent, paragraphs, telHref } from '@/lib/text';
+import { MessageCircle } from 'lucide-react';
+import { Accent, paragraphs, telHref, waHref } from '@/lib/text';
 import { cn, cssVars } from '@/lib/utils';
 import { Icon } from '@/components/icons/sprite';
 import { ActionButton } from '@/components/ui/action-button';
@@ -238,7 +239,7 @@ export function Contact({ s, socials, services, letter }: { s: Settings; socials
   const value = 'mt-1 block text-[1.05rem] text-foreground transition-colors duration-300';
   const items = [
     { icon: 'mail', label: 'Email', node: <a href={`mailto:${s.email}`} className={cn(value, 'hover:text-brand')}>{s.email}</a> },
-    { icon: 'phone', label: 'Phone / WhatsApp', node: <a href={telHref(s.phone)} className={cn(value, 'hover:text-brand')}>{s.phone}</a> },
+    { icon: 'phone', label: 'Phone', node: <a href={telHref(s.phone)} className={cn(value, 'hover:text-brand')}>{s.phone}</a> },
     { icon: 'pin', label: 'Based in', node: <span className={value}>{s.location}</span> },
     ...(s.hours ? [{ icon: 'clock', label: 'Studio hours', node: <span className={value}>{s.hours}</span> }] : []),
   ];
@@ -261,6 +262,19 @@ export function Contact({ s, socials, services, letter }: { s: Settings; socials
                 </li>
               ))}
             </ul>
+            {s.phone && (
+              <ActionButton
+                href={waHref(s.phone, "Hi, I'd like to book a shoot.")}
+                target="_blank"
+                rel="noopener"
+                variant="glass"
+                arrow={false}
+                icon={<MessageCircle aria-hidden="true" />}
+                className="mt-10"
+              >
+                Chat on WhatsApp
+              </ActionButton>
+            )}
             <SocialLinks socials={socials} className="mt-10" />
           </div>
           <EnquiryPanel services={services.map(sv => sv.name)} />

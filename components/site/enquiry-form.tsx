@@ -125,7 +125,7 @@ export function EnquiryForm({
       <div className="grid grid-cols-2 gap-x-8 max-[600px]:grid-cols-1">
         <FloatingField {...bind('phone')} label="Phone" hint="optional" icon={<Phone />} type="tel" autoComplete="tel" />
         <FloatingField as="select" {...bind('service')} label="Type of photography" icon={<Camera />} required>
-          <option value="">Choose a service</option>
+          <option value="">Select one</option>
           {services.map(name => <option key={name}>{name}</option>)}
           <option>Something else</option>
         </FloatingField>

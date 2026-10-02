@@ -30,3 +30,10 @@ export function Accent({ text }: { text: string }) {
 export const paragraphs = (str: string) => String(str || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
 
 export const telHref = (phone: string) => 'tel:' + String(phone || '').replace(/[^+\d]/g, '');
+
+/** WhatsApp click-to-chat link. wa.me wants the full international number as bare digits, so a local
+ *  Nigerian 0… number becomes 234…. */
+export const waHref = (phone: string, text = '') => {
+  const digits = String(phone || '').replace(/\D/g, '').replace(/^0/, '234');
+  return `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+};
