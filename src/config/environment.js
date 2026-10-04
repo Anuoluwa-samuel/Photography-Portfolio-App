@@ -5,7 +5,15 @@ const logger = require('../utils/logger')('env');
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = Number(process.env.PORT || 3000);
 
-if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.startsWith('change-me')) {
+// The session secret signs the admin cookie; anyone who knows it can forge a login. In production a
+// missing, placeholder or short one is fatal rather than a warning (the live site once ran on the
+// .env.example value). `next build` also runs with NODE_ENV=production, so the build phase is exempt.
+const secret = process.env.SESSION_SECRET || '';
+const weakSecret = !secret || secret.startsWith('change-me') || secret === 'dev-only-secret' || secret.length < 32;
+if (weakSecret) {
+  if (isProd && process.env.NEXT_PHASE !== 'phase-production-build') {
+    throw new Error('SESSION_SECRET must be a random string of at least 32 characters (openssl rand -hex 32). Refusing to start.');
+  }
   logger.warn('SESSION_SECRET is not set to a real secret. Edit .env before going live.');
 }
 

@@ -2,6 +2,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { requireAdmin } = require('../middleware/auth');
+const { DbStore } = require('../services/rateLimitStore');
 const upload = require('../middleware/upload');
 const authController = require('../controllers/authController');
 const dashboardController = require('../controllers/dashboardController');
@@ -19,6 +20,7 @@ const router = express.Router();
 /* ---------------------------------------------------------------- */
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false,
+  store: new DbStore('login:'),
   message: { success: false, message: 'Too many login attempts. Try again in 15 minutes.', error: 'RATE_LIMITED' },
 });
 router.post('/api/admin/login', loginLimiter, authController.login);
