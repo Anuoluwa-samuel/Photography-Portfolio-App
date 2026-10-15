@@ -20,6 +20,29 @@ async function api(path, opts = {}) {
   return data;
 }
 
+/* Vercel rejects any request body over 4.5 MB (a 413 before Express runs). Photos above MAX_UPLOAD
+   are re-encoded in the browser as JPEG, shrinking until they fit; the server resizes to 2000px
+   WebP regardless, so nothing visible is lost. The margin leaves room for the multipart wrapper. */
+const MAX_UPLOAD = 4 * 1024 * 1024;
+async function shrinkImage(file) {
+  if (file.size <= MAX_UPLOAD) return file;
+  let bmp;
+  try { bmp = await createImageBitmap(file); } catch { return file; } // e.g. HEIC outside Safari
+  let scale = Math.min(1, 4000 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement('canvas');
+  for (let i = 0; i < 8; i++, scale *= 0.8) {
+    canvas.width = Math.round(bmp.width * scale); canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+    if (blob && blob.size <= MAX_UPLOAD) {
+      bmp.close();
+      return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+    }
+  }
+  bmp.close();
+  return file;
+}
+
 /* ---------- UI helpers ---------- */
 let toastTimer;
 function toast(msg, isErr = false) {
@@ -301,7 +324,7 @@ const views = {
         btn.disabled = true;
         try {
           const { item } = await (t.id ? api(`/testimonials/${t.id}`, { method: 'PATCH', body }) : api('/testimonials', { method: 'POST', body }));
-          if (file && file.size) { const up = new FormData(); up.append('photo', file); await api(`/testimonials/${item.id}/photo`, { method: 'POST', form: up }); }
+          if (file && file.size) { const up = new FormData(); up.append('photo', await shrinkImage(file)); await api(`/testimonials/${item.id}/photo`, { method: 'POST', form: up }); }
           else if (fd.get('_removePhoto') === 'on') await api(`/testimonials/${item.id}/photo`, { method: 'DELETE' });
           closeModal(); toast('Testimonial saved.'); views.testimonials();
         } catch (e) { toast(e.message, true); btn.disabled = false; }
@@ -403,9 +426,9 @@ const views = {
     /* image uploads */
     $$('[data-slot]').forEach(inp => inp.addEventListener('change', async () => {
       if (!inp.files[0]) return;
-      const fd = new FormData(); fd.append('photo', inp.files[0]);
+      const fd = new FormData();
       const slot = inp.closest('.slot'); slot.classList.add('loading');
-      try { const r = await api(`/settings/image/${inp.dataset.slot}`, { method: 'POST', form: fd }); $('img', slot).src = r.url; toast('Image updated.'); }
+      try { fd.append('photo', await shrinkImage(inp.files[0])); const r = await api(`/settings/image/${inp.dataset.slot}`, { method: 'POST', form: fd }); $('img', slot).src = r.url; toast('Image updated.'); }
       catch (e) { toast(e.message, true); } finally { slot.classList.remove('loading'); }
     }));
 
@@ -567,13 +590,22 @@ async function projectEditor(id) {
     files = [...files].filter(f => f.type.startsWith('image/'));
     if (!files.length) return toast('Pick at least one image.', true);
     prog.hidden = false; const bar = $('i', prog);
-    const fd = new FormData();
-    files.forEach(f => fd.append('photos', f));
-    fd.append('caption', $('#f_upCaption').value); fd.append('alt', $('#f_upAlt').value);
     try {
-      bar.style.width = '60%';
-      await api(`/projects/${id}/images`, { method: 'POST', form: fd });
-      bar.style.width = '100%';
+      bar.style.width = '10%';
+      // Shrink, then pack into requests that each stay under the 4.5 MB limit.
+      const batches = [];
+      for (const f of files) {
+        const small = await shrinkImage(f), last = batches[batches.length - 1];
+        if (last && last.size + small.size <= MAX_UPLOAD) { last.files.push(small); last.size += small.size; }
+        else batches.push({ files: [small], size: small.size });
+      }
+      for (const [i, b] of batches.entries()) {
+        const fd = new FormData();
+        b.files.forEach(f => fd.append('photos', f));
+        fd.append('caption', $('#f_upCaption').value); fd.append('alt', $('#f_upAlt').value);
+        await api(`/projects/${id}/images`, { method: 'POST', form: fd });
+        bar.style.width = `${10 + 90 * (i + 1) / batches.length}%`;
+      }
       toast(`Uploaded ${files.length} photo${files.length > 1 ? 's' : ''}.`);
       projectEditor(id);
     } catch (e) { toast(e.message, true); prog.hidden = true; }
