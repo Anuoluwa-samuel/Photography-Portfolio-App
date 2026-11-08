@@ -69,6 +69,9 @@ docker compose --profile test up -d --build web quick-tunnel     # first build: 
 docker compose logs quick-tunnel | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com'
 ```
 
+If the build fails in `npm run build`, run the command again. The build downloads the Google
+fonts, and a brief network hiccup there fails it.
+
 Open that URL. Check the home page and a project page, log in at `/admin`, and upload a large
 photo. Then stop the trial tunnel:
 
