@@ -1,9 +1,7 @@
 // The Express application: API, admin pages, uploads, SEO endpoints.
 //
-// Deliberately has no server.listen() and no Next.js handler, so the same app serves both targets:
-//   * server.js                     — local dev / any long-lived Node host; passes the Next handler
-//                                     as the terminal middleware.
-//   * pages/api/[[...path]].js      — Vercel; Next owns page routing, so unmatched requests 404.
+// Has no server.listen() of its own: server.js creates it and passes the Next handler as the
+// terminal middleware, so anything Express doesn't answer is a public page.
 const path = require('path');
 const express = require('express');
 const helmet = require('helmet');

@@ -1,8 +1,5 @@
-// YIT0 SHOT IT — local dev server and any long-lived Node host (Render, Fly, Docker, a VPS).
+// YIT0 SHOT IT — local dev server and production (Docker on Oracle, see DEPLOY-ORACLE.md).
 // Node.js 20.9+ · Express 5 (admin, API, uploads) · Next.js 16 (public site) · libSQL · Sharp · Nodemailer
-//
-// On Vercel this file is not used: Next owns routing and the same Express app is mounted by
-// pages/api/[[...path]].js instead.
 if (process.argv.includes('--production')) process.env.NODE_ENV = 'production';
 require('dotenv').config();
 
