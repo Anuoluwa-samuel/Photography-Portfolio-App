@@ -10,3 +10,4 @@ public/uploads/site/*
 .next/
 next-env.d.ts
 *.tsbuildinfo
+deploy/oracle/tunnel.env

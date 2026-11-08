@@ -1,6 +1,14 @@
-# Oracle Cloud (or any Linux VM): the app behind Caddy, which gets and renews the HTTPS
-# certificate on its own. Run from this folder:  docker compose up -d --build
+# Oracle Cloud: the app plus a Cloudflare Tunnel. The tunnel makes an outgoing connection to
+# Cloudflare, so the server opens no ports and needs no certificate; Cloudflare serves HTTPS.
+# It shares the PlayBot VM, so it runs as its own Compose project with its own CPU/memory caps.
+#
+#   docker compose up -d --build                          # live, via the tunnel in tunnel.env
+#   docker compose --profile test up -d --build web quick-tunnel
+#                                                         # trial run on a random trycloudflare.com URL
+#
 # The database stays on Turso and photos on Vercel Blob, so the VM holds no data of its own.
+name: yito-shot-it
+
 services:
   web:
     build: ../..
@@ -9,19 +17,19 @@ services:
       NODE_ENV: production
     expose: ["3000"]
     restart: unless-stopped
+    deploy: { resources: { limits: { cpus: "1", memory: 1536M } } }
 
-  caddy:
-    image: caddy:2
-    ports: ["80:80", "443:443", "443:443/udp"]
-    environment:
-      DOMAIN: ${DOMAIN:-yit0shotit.com}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data        # the certificates; keep it or Let's Encrypt rate-limits re-issues
-      - caddy_config:/config
+  tunnel:
+    image: cloudflare/cloudflared:2026.9.3
+    command: ["tunnel", "--no-autoupdate", "run"]
+    env_file: ./tunnel.env # TUNNEL_TOKEN=eyJ… from Cloudflare Zero Trust
     depends_on: [web]
     restart: unless-stopped
+    deploy: { resources: { limits: { cpus: "0.5", memory: 256M } } }
 
-volumes:
-  caddy_data:
-  caddy_config:
+  # No account needed: prints a https://<random>.trycloudflare.com URL in its logs.
+  quick-tunnel:
+    image: cloudflare/cloudflared:2026.9.3
+    command: ["tunnel", "--no-autoupdate", "--url", "http://web:3000"]
+    depends_on: [web]
+    profiles: [test]
