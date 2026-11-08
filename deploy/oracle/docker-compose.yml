@@ -1,0 +1,27 @@
+# Oracle Cloud (or any Linux VM): the app behind Caddy, which gets and renews the HTTPS
+# certificate on its own. Run from this folder:  docker compose up -d --build
+# The database stays on Turso and photos on Vercel Blob, so the VM holds no data of its own.
+services:
+  web:
+    build: ../..
+    env_file: ../../.env
+    environment:
+      NODE_ENV: production
+    expose: ["3000"]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      DOMAIN: ${DOMAIN:-yit0shotit.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # the certificates; keep it or Let's Encrypt rate-limits re-issues
+      - caddy_config:/config
+    depends_on: [web]
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
